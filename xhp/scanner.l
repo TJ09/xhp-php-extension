@@ -596,6 +596,19 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   tok('{');
 }
 
+<ST_PHP>"?"/":"[a-zA-Z_\x7f-\xff] {
+  int ntt = getNextTokenType(last_token());
+  if ((ntt & NextTokenType::XhpClassName) && last_token() != '}') {
+    tok('?');
+  }
+  /* If XHP is enabled and "?:" occurs in a place where an XHP class name is
+     not expected or it occurs after "}", drop into the ST_LOOKING_FOR_COLON
+     state to avoid potentially treating ":" as the beginning of an XHP class
+     name */
+  BEGIN(ST_LOOKING_FOR_COLON);
+  tok('?');
+}
+
 <ST_PHP>"}"/":"[a-zA-Z_\x7f-\xff] {
   // We need to be robust against a '}' in PHP code with
   // no corresponding '{'
