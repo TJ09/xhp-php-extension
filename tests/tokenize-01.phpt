@@ -3,7 +3,7 @@ xhp_token_get_all should return array
 --FILE--
 <?php //xhp
 $tokens = xhp_token_get_all(<<<'code'
-<?hh
+<?php
 
 echo "Cool!";
 code
