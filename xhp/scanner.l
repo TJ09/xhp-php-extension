@@ -927,11 +927,18 @@ static int yy_token(int tok, yyguts_t* yyg) {
     case T_OPEN_TAG:
     case T_OPEN_TAG_WITH_ECHO:
     case T_OPEN_TAG_FAKE:
-      push_state(ST_PHP);
+      // If INITIAL is on the stack, the PHP block was closed and reopened. Pop
+      // that so we don't lose context (like being inside a block of curly
+      // braces).
+      if (yyg->yy_start_stack_ptr && YY_START == INITIAL) {
+        pop_state();
+      } else {
+        push_state(ST_PHP);
+      }
       break;
 
     case T_CLOSE_TAG:
-      pop_state();
+      push_state(INITIAL);
       return ';';
 
     // In PHP it's ok to use keywords such as 'if' as field names
