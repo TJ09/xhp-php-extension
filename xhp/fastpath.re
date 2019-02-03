@@ -73,21 +73,9 @@ bool xhp_fastpath(const char* yy, const size_t len, const xhp_flags_t &flags) {
       }
       continue;
     }
-    <HTML> '<%='|'<%' {
-      if (flags.asp_tags) {
-        state = PHP;
-      }
-      continue;
-    }
 
     <PHP> '?>' {
       state = HTML;
-      continue;
-    }
-    <PHP> '%>' {
-      if (flags.asp_tags) {
-        state = HTML;
-      }
       continue;
     }
     <PHP> 'b'?'\''('\\'.|'\\\n'|[^\x00\\']+)*'\''|
