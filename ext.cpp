@@ -157,7 +157,7 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) 
   string* code_to_give_to_php;
 
   memset(&flags, 0, sizeof(xhp_flags_t));
-  flags.short_tags = 0;
+  flags.short_tags = CG(short_tags);
   flags.include_debug = XHPG(include_debug);
 #if PHP_VERSION_ID >= 50300
   flags.force_global_namespace = XHPG(force_global_namespace);
@@ -228,7 +228,7 @@ static zend_op_array* xhp_compile_string(zval* str, char *filename TSRMLS_DC) {
   xhp_flags_t flags;
 
   memset(&flags, 0, sizeof(xhp_flags_t));
-  flags.short_tags = 0;
+  flags.short_tags = CG(short_tags);
   flags.include_debug = XHPG(include_debug);
   flags.force_global_namespace = XHPG(force_global_namespace);
   flags.eval = true;
