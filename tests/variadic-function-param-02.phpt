@@ -1,5 +1,5 @@
 --TEST--
-Variadic Function Call 2
+Variadic Function Call 02
 --SKIPIF--
 <?php 
 if (version_compare(PHP_VERSION, '5.6', '<')) exit("Skip This test is for PHP 5.5 only.");

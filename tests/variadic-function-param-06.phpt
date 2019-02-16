@@ -1,7 +1,7 @@
 --TEST--
-Variadic Function Call 03
+Variadic Function Call 06
 --SKIPIF--
-<?php 
+<?php
 if (version_compare(PHP_VERSION, '5.6', '<')) exit("Skip This test is for PHP 5.5 only.");
 ?>
 --FILE--
@@ -9,6 +9,6 @@ if (version_compare(PHP_VERSION, '5.6', '<')) exit("Skip This test is for PHP 5.
 class :x {}
 function variadic($a, $b, $c) { return $c; }
 $b = [2, 3];
-echo variadic(1, ...$b);
+echo variadic(1, ...array_values($b));
 --EXPECT--
 3
