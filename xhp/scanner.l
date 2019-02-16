@@ -464,7 +464,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   trait tok(T_TRAIT);
   insteadof tok(T_INSTEADOF);
   yield tok(T_YIELD);
-  "..." tok(T_VARIADIC_PARAMETER);
+  "..." tok(T_ELLIPSIS);
   __namespace__ tok(T_NS_C);
   __dir__ tok(T_DIR);
   (?-i:"attribute") {

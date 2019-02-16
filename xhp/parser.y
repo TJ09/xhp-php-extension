@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | XHP                                                                  |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1998-2014 Zend Technologies Ltd. (http://www.zend.com) |
+  | Copyright (c) 1998-2019 Zend Technologies Ltd. (http://www.zend.com) |
   | Copyright (c) 2009-2014 Facebook, Inc. (http://www.facebook.com)     |
   +----------------------------------------------------------------------+
   | This source file is subject to version 2.00 of the Zend license,     |
@@ -55,9 +55,7 @@ static void replacestr(string &source, const string &find, const string &rep) {
 
 %}
 
-%expect 16
-// 2: PHP's if/else grammar
-// 7: expr '[' dim_offset ']' -- shift will default to first grammar
+%expect 0
 %name-prefix "xhp"
 %pure-parser
 %parse-param { void* yyscanner }
@@ -72,7 +70,6 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %left T_LOGICAL_AND
 %right T_PRINT
 %right T_YIELD
-%right T_DOUBLE_ARROW
 %right T_YIELD_FROM
 %left '=' T_PLUS_EQUAL T_MINUS_EQUAL T_MUL_EQUAL T_DIV_EQUAL T_CONCAT_EQUAL T_MOD_EQUAL T_AND_EQUAL T_OR_EQUAL T_XOR_EQUAL T_SL_EQUAL T_SR_EQUAL T_POW_EQUAL
 %left '?' ':'
@@ -98,6 +95,7 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %left T_ELSE
 %left T_ENDIF
 %right T_STATIC T_ABSTRACT T_FINAL T_PRIVATE T_PROTECTED T_PUBLIC
+%right T_DOUBLE_ARROW
 
 %token T_EXIT 326
 %token T_IF 327
@@ -109,8 +107,6 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_VARIABLE 320
 %token T_NUM_STRING 325
 %token T_INLINE_HTML 321
-%token T_CHARACTER /* unused in vanilla PHP */
-%token T_BAD_CHARACTER /* unused in vanilla PHP */
 %token T_ENCAPSED_AND_WHITESPACE 322
 %token T_CONSTANT_ENCAPSED_STRING 323
 
@@ -177,10 +173,10 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_NS_C 389
 %token T_DIR 372
 %token T_NS_SEPARATOR 390
+%token T_ELLIPSIS 391
 %token T_TRAIT 362
 %token T_INSTEADOF 354
 %token T_YIELD 267
-%token T_VARIADIC_PARAMETER
 %token T_COALESCE 282
 
 %token T_XHP_WHITESPACE
@@ -273,6 +269,25 @@ start:
   }
 ;
 
+reserved_non_modifiers:
+  T_INCLUDE | T_INCLUDE_ONCE | T_EVAL | T_REQUIRE | T_REQUIRE_ONCE | T_LOGICAL_OR | T_LOGICAL_XOR | T_LOGICAL_AND
+| T_INSTANCEOF | T_NEW | T_CLONE | T_EXIT | T_IF | T_ELSEIF | T_ELSE | T_ENDIF | T_ECHO | T_DO | T_WHILE | T_ENDWHILE
+| T_FOR | T_ENDFOR | T_FOREACH | T_ENDFOREACH | T_DECLARE | T_ENDDECLARE | T_AS | T_TRY | T_CATCH | T_FINALLY
+| T_THROW | T_USE | T_INSTEADOF | T_GLOBAL | T_VAR | T_UNSET | T_ISSET | T_EMPTY | T_CONTINUE | T_GOTO
+| T_FUNCTION | T_CONST | T_RETURN | T_PRINT | T_YIELD | T_LIST | T_SWITCH | T_ENDSWITCH | T_CASE | T_DEFAULT | T_BREAK
+| T_ARRAY | T_CALLABLE | T_EXTENDS | T_IMPLEMENTS | T_NAMESPACE | T_TRAIT | T_INTERFACE | T_CLASS
+| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C
+;
+
+semi_reserved:
+  reserved_non_modifiers
+| T_STATIC | T_ABSTRACT | T_FINAL | T_PRIVATE | T_PROTECTED | T_PUBLIC
+;
+
+identifier:
+  T_STRING
+| semi_reserved
+
 top_statement_list:
   top_statement_list top_statement {
     $$ = $1 + $2;
@@ -289,10 +304,22 @@ namespace_name:
   }
 ;
 
+name:
+  namespace_name
+| T_NAMESPACE T_NS_SEPARATOR namespace_name {
+    $$ = $1 + $2 + $3;
+  }
+| T_NS_SEPARATOR namespace_name {
+    $$ = $1 + $2;
+  }
+;
+
 top_statement:
   statement
 | function_declaration_statement
 | class_declaration_statement
+| trait_declaration_statement
+| interface_declaration_statement
 | T_HALT_COMPILER '(' ')' ';' {
     $$ = $1 + $2 + $3 + $4;
   }
@@ -305,12 +332,65 @@ top_statement:
 | T_NAMESPACE '{' top_statement_list '}' {
     $$ = $1 + $2 + $3 + $4;
   }
+| T_USE mixed_group_use_declaration ';' {
+    $$ = $1 + " " + $2 + $3;
+  }
+| T_USE use_type group_use_declaration ';' {
+    $$ = $1 + " " + $2 + $3;
+  }
 | T_USE use_declarations ';' {
     $$ = $1 + " " + $2 + $3;
   }
-| constant_declaration ';' {
-    $$ = $1 + $2;
+| T_USE use_type use_declarations ';' {
+    $$ = $1 + " " + $2 + " " + $3 + $4;
   }
+| T_CONST const_list ';' {
+    $$ = $1 + " " + $2 + $3;
+  }
+;
+
+use_type:
+  T_FUNCTION
+| T_CONST
+;
+
+group_use_declaration:
+  namespace_name T_NS_SEPARATOR '{' unprefixed_use_declarations possible_comma '}' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
+  }
+  T_NS_SEPARATOR namespace_name T_NS_SEPARATOR '{' unprefixed_use_declarations possible_comma '}' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
+  }
+;
+
+mixed_group_use_declaration:
+  namespace_name T_NS_SEPARATOR '{' inline_use_declarations possible_comma '}' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
+  }
+  T_NS_SEPARATOR namespace_name T_NS_SEPARATOR '{' inline_use_declarations possible_comma '}' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
+  }
+;
+
+possible_comma:
+  /* empty */ {
+    $$ = "";
+  }
+| ','
+;
+
+inline_use_declarations:
+  inline_use_declarations ',' inline_use_declaration {
+    $$ = $1 + $2 + $3;
+  }
+| inline_use_declaration
+;
+
+unprefixed_use_declarations:
+  unprefixed_use_declarations ',' unprefixed_use_declaration {
+    $$ = $1 + $2 + $3;
+  }
+| unprefixed_use_declaration
 ;
 
 use_declarations:
@@ -320,35 +400,32 @@ use_declarations:
 | use_declaration
 ;
 
-use_declaration:
+inline_use_declaration:
+  unprefixed_use_declaration
+| use_type unprefixed_use_declaration {
+    $$ = $1 + " " +  $2;
+  }
+;
+
+unprefixed_use_declaration:
   namespace_name
 | namespace_name T_AS T_STRING {
     $$ = $1 + " " + $2 + " " + $3;
   }
-| T_NS_SEPARATOR namespace_name {
+;
+
+use_declaration:
+  unprefixed_use_declaration
+| T_NS_SEPARATOR unprefixed_use_declaration {
     $$ = $1 + $2;
   }
-| T_NS_SEPARATOR namespace_name T_AS T_STRING {
-    $$ = $1 + $2 + " " + $3 + " " + $4;
-  }
 ;
 
-ident_no_semireserved:
-    T_STRING
-  | T_XHP_ATTRIBUTE
-  | T_XHP_CATEGORY
-  | T_XHP_CHILDREN
-  | T_XHP_REQUIRED
-  | T_XHP_ENUM
-;
-
-constant_declaration:
-  constant_declaration ',' T_STRING '=' static_scalar {
-    $$ = $1 + $2 + $3 + $4 + $5;
+const_list:
+  const_list ',' const_decl {
+    $$ = $1 + $2 + $3;
   }
-| T_CONST T_STRING '=' static_scalar {
-    $$ = $1 + " " + $2 + $3 + $4;
-  }
+| const_decl
 ;
 
 inner_statement_list:
@@ -364,6 +441,8 @@ inner_statement:
   statement
 | function_declaration_statement
 | class_declaration_statement
+| trait_declaration_statement
+| interface_declaration_statement
 | T_HALT_COMPILER '(' ')' ';' {
     $$ = $1 + $2 + $3 + $4;
   }
@@ -387,12 +466,8 @@ unticked_statement:
   '{' inner_statement_list '}' {
     $$ = $1 + $2 + $3;
   }
-| T_IF '(' expr ')' statement elseif_list else_single {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
-  }
-| T_IF '(' expr ')' ':' inner_statement_list new_elseif_list new_else_single T_ENDIF ';' {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10;
-  }
+| if_stmt
+| alt_if_stmt
 | T_WHILE '(' expr ')' while_statement {
     $$ = $1 + $2 + $3 + $4 + $5;
   }
@@ -405,25 +480,13 @@ unticked_statement:
 | T_SWITCH '(' expr ')' switch_case_list {
     $$ = $1 + $2 + $3 + $4 + $5;
   }
-| T_BREAK ';' {
-    $$ = $1 + $2;
-  }
-| T_BREAK expr ';' {
+| T_BREAK optional_expr ';' {
     $$ = $1 + " " + $2 + $3;
   }
-| T_CONTINUE ';' {
-    $$ = $1 + $2;
-  }
-| T_CONTINUE expr ';' {
+| T_CONTINUE optional_expr ';' {
     $$ = $1 + " " + $2 + $3;
   }
-| T_RETURN ';' {
-    $$ = $1 + $2;
-  }
-| T_RETURN expr_without_variable ';' {
-    $$ = $1 + " " + $2 + $3;
-  }
-| T_RETURN variable ';' {
+| T_RETURN optional_expr ';' {
     $$ = $1 + " " + $2 + $3;
   }
 | T_GLOBAL global_var_list ';' {
@@ -439,21 +502,21 @@ unticked_statement:
 | expr ';' {
     $$ = $1 + $2;
   }
-| T_UNSET '(' unset_variables ')' ';' {
-    $$ = $1 + $2 + $3 + $4 + $5;
+| T_UNSET '(' unset_variables possible_comma ')' ';' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
-| T_FOREACH '(' variable T_AS foreach_variable foreach_optional_arg ')' foreach_statement {
-    $$ = $1 + $2 + $3 + " " + $4 + " " + $5 + $6 + $7 + $8;
+| T_FOREACH '(' expr T_AS foreach_variable ')' foreach_statement {
+    $$ = $1 + $2 + $3 + " " + $4 + " " + $5 + $6 + $7;
   }
-| T_FOREACH '(' expr_without_variable T_AS variable foreach_optional_arg ')' foreach_statement {
-    $$ = $1 + $2 + $3 + " " + $4 + " " + $5 + $6 + $7 + $8;
+| T_FOREACH '(' expr T_AS foreach_variable T_DOUBLE_ARROW foreach_variable ')' foreach_statement {
+    $$ = $1 + $2 + $3 + " " + $4 + " " + $5 + $6 + $7 + $8 + $9;
   }
-| T_DECLARE '(' declare_list ')' declare_statement {
+| T_DECLARE '(' const_list ')' declare_statement {
     $$ = $1 + $2 + $3 + $4 + $5;
   }
 | ';' /* empty statement */
-| T_TRY '{' inner_statement_list '}' T_CATCH '(' fully_qualified_class_name T_VARIABLE ')' '{' inner_statement_list '}' additional_catches additional_finally {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + " " + $8 + $9 + $10 + $11 + $12 + $13 + $14;
+| T_TRY '{' inner_statement_list '}' catch_list finally_statement {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
 | T_THROW expr ';' {
     $$ = $1 + " " + $2 + $3;
@@ -463,32 +526,28 @@ unticked_statement:
   }
 ;
 
-additional_catches:
-  non_empty_additional_catches
-| /* empty */ {
+catch_list:
+  /* empty */ {
     $$ = "";
   }
-;
-
-non_empty_additional_catches:
-  additional_catch
-| non_empty_additional_catches additional_catch {
-    $$ = $1 + $2;
+| catch_list T_CATCH '(' catch_name_list T_VARIABLE ')' '{' inner_statement_list '}' {
+  $$ = $1 + $2 + $3 + " " + $4 + $5 + $6 + $7 + $8 + $9;
   }
 ;
 
-additional_catch:
-  T_CATCH '(' fully_qualified_class_name T_VARIABLE ')' '{' inner_statement_list '}' {
-    $$ = $1 + $2 + $3 + " " + $4 + $5 + $6 + $7 + $8;
+catch_name_list:
+  name
+| catch_name_list '|' name {
+    $$ = $1 + $2 + $3;
   }
 ;
 
-additional_finally:
-  T_FINALLY '{' inner_statement_list '}' {
+finally_statement:
+  /* empty */ {
+    $$ = "";
+  }
+| T_FINALLY '{' inner_statement_list '}' {
     $$ = $1 + $2 + $3 + $4;
-  }
-| /* empty */ {
-    $$ = "";
   }
 ;
 
@@ -504,11 +563,9 @@ unset_variable:
 ;
 
 function_declaration_statement:
-  unticked_function_declaration_statement
-;
-
-class_declaration_statement:
-  unticked_class_declaration_statement
+  function returns_ref T_STRING '(' parameter_list ')' return_type '{' inner_statement_list '}' {
+    $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10;
+  }
 ;
 
 is_reference:
@@ -518,29 +575,43 @@ is_reference:
 | '&'
 ;
 
-unticked_function_declaration_statement:
-  function is_reference T_STRING '(' parameter_list ')' '{' inner_statement_list '}' {
-    $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9;
+is_variadic:
+  /* empty */ {
+    $$ = "";
+  }
+| T_ELLIPSIS
+;
+
+class_declaration_statement:
+  class_modifiers T_CLASS T_STRING extends_from implements_list '{' class_statement_list '}' {
+    $$ = $1 + " " + $2 + " "  + $3 + $4 + $5 + $6 + $7 + $8;
+  }
+  | T_CLASS T_STRING extends_from implements_list '{' class_statement_list '}' {
+    $$ = $1 + " "  + $2 + $3 + $4 + $5 + $6 + $7;
   }
 ;
 
-unticked_class_declaration_statement:
-  class_entry_type T_STRING extends_from implements_list '{' class_statement_list '}' {
-    $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7;
+class_modifiers:
+  class_modifier
+| class_modifiers class_modifier {
+    $$ = $1 + " " + $2;
   }
-| interface_entry T_STRING interface_extends_list '{' class_statement_list '}' {
+;
+
+class_modifier:
+  T_ABSTRACT
+| T_FINAL
+;
+
+trait_declaration_statement:
+  T_TRAIT T_STRING '{' class_statement_list '}' {
+    $$ = $1 + " " + $2 + $3 + $4 + $5;
+  }
+;
+
+interface_declaration_statement:
+  T_INTERFACE T_STRING interface_extends_list '{' class_statement_list '}' {
     $$ = $1 + " " + $2 + $3 + $4 + $5 + $6;
-  }
-;
-
-class_entry_type:
-  T_CLASS
-| T_ABSTRACT T_CLASS {
-    $$ = $1 + " " + $2;
-  }
-| T_TRAIT
-| T_FINAL T_CLASS {
-    $$ = $1 + " " + $2;
   }
 ;
 
@@ -548,20 +619,16 @@ extends_from:
   /* empty */ {
     $$ = "";
   }
-| T_EXTENDS fully_qualified_class_name {
+| T_EXTENDS name {
     $$ = " " + $1 + " " + $2;
   }
-;
-
-interface_entry:
-  T_INTERFACE
 ;
 
 interface_extends_list:
   /* empty */ {
     $$ = "";
   }
-| T_EXTENDS interface_list {
+| T_EXTENDS name_list {
     $$ = $1 + " " + $2;
   }
 ;
@@ -570,24 +637,8 @@ implements_list:
   /* empty */ {
     $$ = "";
   }
-| T_IMPLEMENTS interface_list {
+| T_IMPLEMENTS name_list {
     $$ = " " + $1 + " " + $2;
-  }
-;
-
-interface_list:
-  fully_qualified_class_name
-| interface_list ',' fully_qualified_class_name {
-    $$ = $1 + $2 + $3;
-  }
-;
-
-foreach_optional_arg:
-  /* empty */ {
-    $$ = "";
-  }
-| T_DOUBLE_ARROW foreach_variable {
-    $$ = $1 + $2;
   }
 ;
 
@@ -595,6 +646,12 @@ foreach_variable:
   variable
 | '&' variable {
     $$ = $1 + $2;
+  }
+| T_LIST '(' array_pair_list ')' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| '[' array_pair_list ']' {
+    $$ = $1 + $2 + $3;
   }
 ;
 
@@ -616,15 +673,6 @@ declare_statement:
   statement
 | ':' inner_statement_list T_ENDDECLARE ';' {
     $$ = $1 + $2 + $3 + $4;
-  }
-;
-
-declare_list:
-  T_STRING '=' static_scalar {
-    $$ = $1 + $2 + $3;
-  }
-| declare_list ',' T_STRING '=' static_scalar {
-    $$ = $1 + $2 + $3 + $4 + $5;
   }
 ;
 
@@ -667,132 +715,112 @@ while_statement:
   }
 ;
 
-elseif_list:
-  /* empty */ {
-    $$ = "";
+if_stmt_without_else:
+  T_IF '(' expr ')' statement {
+    $$ = $1 + $2 + $3 + $4 + $5;
   }
-| elseif_list T_ELSEIF '(' expr ')' statement {
+| if_stmt_without_else T_ELSEIF '(' expr ')' statement {
     $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
 ;
 
-new_elseif_list:
-  /* empty */ {
-    $$ = "";
+if_stmt:
+  if_stmt_without_else %prec T_NOELSE
+| if_stmt_without_else T_ELSE statement {
+    $$ = $1 + $2 + " " + $3;
   }
-| new_elseif_list T_ELSEIF '(' expr ')' ':' inner_statement_list {
+;
+
+alt_if_stmt_without_else:
+  T_IF '(' expr ')' ':' inner_statement_list {
+    $$ = $1 + $2 + $3 + $4 + $5;
+  }
+| alt_if_stmt_without_else T_ELSEIF '(' expr ')' ':' inner_statement_list {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
   }
 ;
 
-else_single:
-  /* empty */ {
-    $$ = "";
-  }
-| T_ELSE statement {
-    $$ = $1 + " " + $2;
-  }
-;
-
-new_else_single:
-  /* empty */ {
-    $$ = "";
-  }
-| T_ELSE ':' inner_statement_list {
+alt_if_stmt:
+  alt_if_stmt_without_else T_ENDIF ';' {
     $$ = $1 + $2 + $3;
+  }
+| alt_if_stmt_without_else T_ELSE ':' inner_statement_list T_ENDIF ';' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
 ;
 
 parameter_list:
   non_empty_parameter_list
-| non_empty_parameter_list ',' variadic_parameter {
-    $$ = $1 + $2 + $3;
-  }
 | /* empty */ {
     $$ = "";
-  }
-;
-
-variadic_parameter:
-  optional_class_type T_VARIADIC_PARAMETER T_VARIABLE {
-    $$ = $1 + $2 + $3;
   }
 ;
 
 non_empty_parameter_list:
-  optional_class_type T_VARIABLE {
-    $$ = $1 + $2;
-  }
-| optional_class_type '&' T_VARIABLE {
+  parameter
+  | non_empty_parameter_list ',' parameter {
     $$ = $1 + $2 + $3;
   }
-| optional_class_type '&' T_VARIABLE '=' static_scalar {
-    $$ = $1 + $2 + $3 + $4 + $5;
-  }
-| optional_class_type T_VARIABLE '=' static_scalar {
+;
+
+parameter:
+  optional_type is_reference is_variadic T_VARIABLE {
     $$ = $1 + $2 + $3 + $4;
   }
-| non_empty_parameter_list ',' optional_class_type T_VARIABLE {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| non_empty_parameter_list ',' optional_class_type '&' T_VARIABLE {
-    $$ = $1 + $2 + $3 + $4 + $5;
-  }
-| non_empty_parameter_list ',' optional_class_type '&' T_VARIABLE '=' static_scalar {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
-  }
-| non_empty_parameter_list ',' optional_class_type T_VARIABLE '=' static_scalar {
+| optional_type is_reference is_variadic T_VARIABLE '=' expr {
     $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
 ;
 
-optional_class_type:
+optional_type:
   /* empty */ {
     $$ = "";
   }
-| fully_qualified_class_name {
-    $$ = $1 + " ";
-  }
-| T_ARRAY {
-    $$ = $1 + " ";
+| type_expr
+;
+
+type_expr:
+  type
+| '?' type {
+    $$ = $1 + $2;
   }
 ;
 
 type:
-  T_ARRAY	{ $$ = $1; }
-| T_CALLABLE	{ $$ = $1; }
-| fully_qualified_class_name		{ $$ = $1; }
+  T_ARRAY
+| T_CALLABLE
+| name
 ;
 
 return_type:
-  /* empty */	{ $$ = ""; }
-| ':' type	{ $$ = $1 + " " + $2; }
-;
-
-function_call_parameter_list:
-  non_empty_function_call_parameter_list
-| non_empty_function_call_parameter_list ',' variadic_parameter {
-    $$ = $1 + $2 + $3;
-  }
-| /* empty */ {
+  /* empty */ {
     $$ = "";
   }
+| ':' type_expr {
+    $$ = $1 + " " + $2;
+  }
 ;
 
-non_empty_function_call_parameter_list:
-  expr_without_variable
-| variable
-| '&' w_variable {
+argument_list:
+'(' ')' {
     $$ = $1 + $2;
   }
-| non_empty_function_call_parameter_list ',' expr_without_variable {
-    $$ = $1 + $2 + $3;
-  }
-| non_empty_function_call_parameter_list ',' variable {
-    $$ = $1 + $2 + $3;
-  }
-| non_empty_function_call_parameter_list ',' '&' w_variable {
+| '(' non_empty_argument_list possible_comma ')' {
     $$ = $1 + $2 + $3 + $4;
+  }
+;
+
+non_empty_argument_list:
+  argument
+| non_empty_argument_list ',' argument {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+argument:
+  expr
+| T_ELLIPSIS expr {
+    $$ = $1 + $2;
   }
 ;
 
@@ -804,24 +832,19 @@ global_var_list:
 ;
 
 global_var:
-  T_VARIABLE
-| '$' r_variable {
-    $$ = $1 + $2;
-  }
-| '$' '{' expr '}' {
-    $$ = $1 + $2 + $3 + $4;
-  }
+ simple_variable
 ;
 
 static_var_list:
-  static_var_list ',' T_VARIABLE {
+  static_var_list ',' static_var {
     $$ = $1 + $2 + $3;
   }
-| static_var_list ',' T_VARIABLE '=' static_scalar {
-    $$ = $1 + $2 + $3 + $4 + $5;
-  }
-| T_VARIABLE
-| T_VARIABLE '=' static_scalar {
+| static_var
+;
+
+static_var:
+  T_VARIABLE
+| T_VARIABLE '=' expr {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -836,57 +859,49 @@ class_statement_list:
 ;
 
 class_statement:
-  variable_modifiers class_variable_declarations ';' {
+  variable_modifiers property_list ';' {
     $$ = $1 + " " + $2 + $3;
   }
-| class_constant_declaration ';' {
-    $$ = $1 + $2;
+| method_modifiers T_CONST class_const_list ';' {
+    $$ = $1 + $2 + " " + $3 + $4;
   }
-| trait_use_statement
+| T_USE name_list trait_adaptations {
+    $$ = $1 + " " + $2 + $3;
+  }
 | method_modifiers function {
     yyextra->old_expecting_xhp_class_statements = yyextra->expecting_xhp_class_statements;
     yyextra->expecting_xhp_class_statements = false;
-  } is_reference T_STRING '(' parameter_list ')' return_type method_body {
+  } returns_ref identifier '(' parameter_list ')' return_type method_body {
     yyextra->expecting_xhp_class_statements = yyextra->old_expecting_xhp_class_statements;
     $$ = $1 + $2 + " " + $4 + $5 + $6 + $7 + $8 + $9 + $10;
   }
 ;
 
-trait_use_statement:
-  T_USE trait_list trait_adaptions {
-    $$ = $1 + " " + $2 + $3;
-  }
-;
-
-trait_list:
-  fully_qualified_class_name
-| trait_list ',' fully_qualified_class_name {
+name_list:
+  name
+| name_list ',' name {
     $$ = $1 + $2 + $3;
   }
 ;
 
-trait_adaptions:
+trait_adaptations:
   ';'
-| '{' trait_adaption_list '}' {
+| '{' '}' {
+    $$ = $1 + $2;
+  }
+| '{' trait_adaptation_list '}' {
     $$ = $1 + $2 + $3;
   }
 ;
 
-trait_adaption_list:
-  /* empty */ {
-    $$ = "";
-  }
-| non_empty_trait_adaptation_list
-;
-
-non_empty_trait_adaptation_list:
-  trait_adaptation_statement
-| non_empty_trait_adaptation_list trait_adaptation_statement {
+trait_adaptation_list:
+  trait_adaptation
+| trait_adaptation_list trait_adaptation {
     $$ = $1 + $2;
   }
 ;
 
-trait_adaptation_statement:
+trait_adaptation:
   trait_precedence ';' {
     $$ = $1 + $2;
   }
@@ -896,45 +911,35 @@ trait_adaptation_statement:
 ;
 
 trait_precedence:
-  trait_method_reference_fully_qualified T_INSTEADOF trait_reference_list {
+  absolute_trait_method_reference T_INSTEADOF name_list {
     $$ = $1 + " " + $2 + " " + $3;
   }
 ;
 
-trait_reference_list:
-  fully_qualified_class_name {
-    $$ = $1;
+trait_alias:
+  trait_method_reference T_AS T_STRING {
+    $$ = $1 + $2 + $3;
   }
-| trait_reference_list ',' fully_qualified_class_name {
+| trait_method_reference T_AS reserved_non_modifiers {
+    $$ = $1 + $2 + $3;
+  }
+| trait_method_reference T_AS member_modifier identifier {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| trait_method_reference T_AS member_modifier {
     $$ = $1 + $2 + $3;
   }
 ;
 
 trait_method_reference:
-  T_STRING
-| trait_method_reference_fully_qualified
+  identifier
+| absolute_trait_method_reference
 ;
 
-trait_method_reference_fully_qualified:
-  fully_qualified_class_name T_PAAMAYIM_NEKUDOTAYIM T_STRING {
+absolute_trait_method_reference:
+  name T_PAAMAYIM_NEKUDOTAYIM identifier {
     $$ = $1 + $2 + $3;
   }
-;
-
-trait_alias:
-  trait_method_reference T_AS trait_modifiers T_STRING {
-    $$ = $1 + " " + $2 + " " + $3 + " " + $4;
-  }
-| trait_method_reference T_AS member_modifier {
-    $$ = $1 + " " + $2 + " " + $3;
-  }
-;
-
-trait_modifiers:
-  /* empty */ {
-    $$ = "";
-  }
-| member_modifier
 ;
 
 method_body:
@@ -976,34 +981,48 @@ member_modifier:
 | T_FINAL
 ;
 
-class_variable_declarations:
-  class_variable_declarations ',' class_variable_declaration {
+property_list:
+  property_list ',' property {
     $$ = $1 + $2 + $3;
   }
-| class_variable_declaration
+| property
 ;
 
-class_variable_declaration:
+property:
   T_VARIABLE
 | T_VARIABLE '=' expr {
     $$ = $1 + $2 + $3;
   }
 ;
 
-class_constant_declaration:
-  class_constant_declaration ',' T_STRING '=' static_scalar {
-    $$ = $1 + $2 + $3 + $4 + $5;
+class_const_list:
+  class_const_list ',' class_const_decl {
+    $$ = $1 + $2 + $3;
   }
-| T_CONST T_STRING '=' static_scalar {
-    $$ = $1 + " " + $2 + $3 + $4;
+| class_const_decl
+;
+
+class_const_decl:
+  identifier '=' expr {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+const_decl:
+  T_STRING '=' expr {
+    $$ = $1 + $2 + $3;
   }
 ;
 
 echo_expr_list:
-  echo_expr_list ',' expr {
+  echo_expr_list ',' echo_expr {
     $$ = $1 + $2 + $3;
   }
-| expr
+| echo_expr
+;
+
+echo_expr:
+  expr
 ;
 
 for_expr:
@@ -1021,42 +1040,9 @@ non_empty_for_expr:
 | expr
 ;
 
-chaining_method_or_property:
-  chaining_method_or_property variable_property {
-    $$ = $1 + $2;
-  }
-| variable_property {
-    $$ = $1;
-  }
-;
-
-chaining_dereference:
-  chaining_dereference '[' dim_offset ']' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| '[' dim_offset ']' {
-    $$ = $1 + $2 + $3;
-  }
-;
-
-chaining_instance_call:
-  chaining_dereference chaining_method_or_property {
-    $$ = $1 + $2;
-  }
-| chaining_dereference {
-    $$ = $1;
-  }
-| chaining_method_or_property {
-    $$ = $1;
-  }
-;
-
-instance_call:
-  /* empty */ {
-    $$ = "";
-  }
-| chaining_instance_call {
-    $$ = $1;
+anonymous_class:
+  T_CLASS ctor_arguments extends_from implements_list '{' class_statement_list '}' {
+    $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7;
   }
 ;
 
@@ -1064,11 +1050,18 @@ new_expr:
   T_NEW class_name_reference ctor_arguments {
     $$ = $1 + " " + $2 + $3;
   }
+| T_NEW anonymous_class {
+    $$ = $1 + " " + $2;
+  }
 ;
 
-expr_without_variable:
-  T_LIST '(' assignment_list ')' '=' expr {
+expr:
+  variable
+| T_LIST '(' array_pair_list ')' '=' expr {
     $$ = $1 + $2 + $3 + $4 + $5 + $6;
+  }
+| '[' array_pair_list ']' '=' expr {
+    $$ = $1 + $2 + $3 + $4 + $5;
   }
 | variable '=' expr {
     $$ = $1 + $2 + $3;
@@ -1076,14 +1069,8 @@ expr_without_variable:
 | variable '=' '&' variable {
     $$ = $1 + $2 + $3 + $4;
   }
-| variable '=' '&' new_expr {
-    $$ = $1 + $2 + $3 + $4;
-  }
 | new_expr {
     $$ = $1;
-  }
-| '(' new_expr ')' instance_call {
-    $$ = $1 + $2 + $3 + $4;
   }
 | T_CLONE expr {
     $$ = $1 + " " + $2;
@@ -1095,6 +1082,9 @@ expr_without_variable:
     $$ = $1 + $2 + $3;
   }
 | variable T_MUL_EQUAL expr {
+    $$ = $1 + $2 + $3;
+  }
+| variable T_POW_EQUAL expr {
     $$ = $1 + $2 + $3;
   }
 | variable T_DIV_EQUAL expr {
@@ -1121,16 +1111,16 @@ expr_without_variable:
 | variable T_SR_EQUAL expr {
     $$ = $1 + $2 + $3;
   }
-| rw_variable T_INC {
+| variable T_INC {
     $$ = $1 + $2;
   }
-| T_INC rw_variable {
+| T_INC variable {
     $$ = $1 + $2;
   }
-| rw_variable T_DEC {
+| variable T_DEC {
     $$ = $1 + $2;
   }
-| T_DEC rw_variable {
+| T_DEC variable {
     $$ = $1 + $2;
   }
 | expr T_BOOLEAN_OR expr {
@@ -1167,6 +1157,9 @@ expr_without_variable:
     $$ = $1 + $2 + $3;
   }
 | expr '*' expr {
+    $$ = $1 + $2 + $3;
+  }
+| expr T_POW expr {
     $$ = $1 + $2 + $3;
   }
 | expr '/' expr {
@@ -1215,6 +1208,9 @@ expr_without_variable:
     $$ = $1 + $2 + $3;
   }
 | expr T_IS_GREATER_OR_EQUAL expr {
+    $$ = $1 + $2 + $3;
+  }
+| expr T_SPACESHIP expr {
     $$ = $1 + $2 + $3;
   }
 | expr T_INSTANCEOF class_name_reference {
@@ -1267,30 +1263,37 @@ expr_without_variable:
     $$ = $1 + $2;
   }
 | scalar
-| T_ARRAY '(' array_pair_list ')' {
-    $$ = $1 + $2 + $3 + $4;
-  }
 | T_BACKTICKS_EXPR
 | T_PRINT expr {
     $$ = $1 + " " + $2;
   }
 | T_YIELD
 | T_YIELD expr {
-    $$ = $1 + " " + $2;
+    $$ = $1 + $2;
   }
 | T_YIELD expr T_DOUBLE_ARROW expr {
-    $$ = $1 + " " + $2 + $3 + $4;
+    $$ = $1 + $2 + $3;
   }
-| function is_reference '(' parameter_list ')' lexical_vars return_type '{' inner_statement_list '}' {
+| T_YIELD_FROM expr {
+    $$ = $1 + $2;
+  }
+| function returns_ref '(' parameter_list ')' lexical_vars return_type '{' inner_statement_list '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10;
   }
-| T_STATIC function is_reference '(' parameter_list ')' lexical_vars return_type '{' inner_statement_list '}' {
+| T_STATIC function returns_ref '(' parameter_list ')' lexical_vars return_type '{' inner_statement_list '}' {
     $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10 + $11;
   }
 ;
 
 function:
   T_FUNCTION
+;
+
+returns_ref:
+  /* empty */ {
+    $$ = "";
+  }
+| '&'
 ;
 
 lexical_vars:
@@ -1303,12 +1306,13 @@ lexical_vars:
 ;
 
 lexical_var_list:
-  lexical_var_list ',' T_VARIABLE {
+  lexical_var_list ',' lexical_var {
     $$ = $1 + $2 + $3;
   }
-| lexical_var_list ',' '&' T_VARIABLE {
-    $$ = $1 + $2 + $3 + $4;
-  }
+| lexical_var
+;
+
+lexical_var:
 | T_VARIABLE
 | '&' T_VARIABLE {
     $$ = $1 + $2;
@@ -1316,88 +1320,35 @@ lexical_var_list:
 ;
 
 function_call:
-  namespace_name '(' function_call_parameter_list ')' {
+  name argument_list {
+    $$ = $1 + $2;
+  }
+| class_name T_PAAMAYIM_NEKUDOTAYIM member_name argument_list {
     $$ = $1 + $2 + $3 + $4;
   }
-| T_NAMESPACE T_NS_SEPARATOR namespace_name '(' function_call_parameter_list ')' {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6;
-  }
-| T_NS_SEPARATOR namespace_name '(' function_call_parameter_list ')' {
-    $$ = $1 + $2 + $3 + $4 + $5;
-  }
-| class_name T_PAAMAYIM_NEKUDOTAYIM T_STRING '(' function_call_parameter_list ')' {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6;
-  }
-| variable_class_name T_PAAMAYIM_NEKUDOTAYIM T_STRING '(' function_call_parameter_list ')' {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6;
-  }
-| variable_class_name T_PAAMAYIM_NEKUDOTAYIM variable_without_objects '(' function_call_parameter_list ')' {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6;
-  }
-| class_name T_PAAMAYIM_NEKUDOTAYIM variable_without_objects '(' function_call_parameter_list ')' {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6;
-  }
-| variable_without_objects '(' function_call_parameter_list ')' {
+| variable_class_name T_PAAMAYIM_NEKUDOTAYIM member_name argument_list {
     $$ = $1 + $2 + $3 + $4;
+  }
+| callable_expr argument_list {
+    $$ = $1 + $2;
   }
 ;
 
 class_name:
   T_STATIC
-| namespace_name
-| T_NAMESPACE T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2 + $3;
-  }
-| T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2;
-  }
-;
-
-fully_qualified_class_name:
-  namespace_name
-| T_NAMESPACE T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2 + $3;
-  }
-| T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2;
-  }
+| name
 ;
 
 class_name_reference:
   class_name
-| dynamic_class_name_reference
-;
-
-dynamic_class_name_reference:
-  base_variable T_OBJECT_OPERATOR object_property dynamic_class_name_variable_properties {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| base_variable
-;
-
-dynamic_class_name_variable_properties:
-  dynamic_class_name_variable_properties dynamic_class_name_variable_property {
-    $$ = $1 + $2;
-  }
-| /* empty */ {
-    $$ = "";
-  }
-;
-
-dynamic_class_name_variable_property:
-  T_OBJECT_OPERATOR object_property {
-    $$ = $1 + $2;
-  }
+| new_variable
 ;
 
 exit_expr:
   /* empty */ {
     $$ = "";
   }
-| '(' ')' {
-    $$ = $1 + $2;
-  }
-| '(' expr ')' {
+| '(' optional_expr')' {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -1406,308 +1357,187 @@ ctor_arguments:
   /* empty */ {
     $$ = "";
   }
-| '(' function_call_parameter_list ')' {
-    $$ = $1 + $2 + $3;
-  }
+| argument_list
 ;
 
-common_scalar:
+dereferencable_scalar:
+  T_ARRAY '(' array_pair_list ')' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| '[' array_pair_list ']' {
+    $$ = $1 + $2 + $3;
+  }
+| T_CONSTANT_ENCAPSED_STRING
+;
+
+scalar:
   T_LNUMBER
 | T_DNUMBER
-| T_CONSTANT_ENCAPSED_STRING
 | T_LINE
 | T_FILE
 | T_DIR
-| T_CLASS_C
 | T_TRAIT_C
 | T_METHOD_C
 | T_FUNC_C
 | T_NS_C
+| T_CLASS_C
 | T_HEREDOC
-;
-
-static_scalar: /* compile-time evaluated scalars */
-  common_scalar
-| namespace_name
-| T_NAMESPACE T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2 + $3;
-  }
-| T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2;
-  }
-| '+' static_scalar {
-    $$ = $1 + $2;
-  }
-| '-' static_scalar {
-    $$ = $1 + $2;
-  }
-| T_ARRAY '(' static_array_pair_list ')' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| static_class_constant
-;
-
-static_class_constant:
-  class_name T_PAAMAYIM_NEKUDOTAYIM T_STRING {
-    $$ = $1 + $2 + $3;
-  }
-;
-
-scalar:
-  T_STRING_VARNAME
-| class_constant
-| namespace_name
-| T_NAMESPACE T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2 + $3;
-  }
-| T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2;
-  }
-| common_scalar
 | '"' encaps_list '"' {
     $$ = $1 + $2 + $3;
   }
+| dereferencable_scalar
+| constant
 ;
 
-static_array_pair_list:
+constant:
+  name
+| class_name T_PAAMAYIM_NEKUDOTAYIM identifier {
+    $$ = $1 + $2 + $3;
+  }
+| variable_class_name T_PAAMAYIM_NEKUDOTAYIM identifier {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+optional_expr:
   /* empty */ {
     $$ = "";
   }
-| non_empty_static_array_pair_list possible_comma
+| expr
 ;
 
-possible_comma:
-  /* empty */ {
-    $$ = "";
-  }
-| ','
+variable_class_name:
+  dereferencable
 ;
 
-non_empty_static_array_pair_list:
-  non_empty_static_array_pair_list ',' static_scalar T_DOUBLE_ARROW static_scalar {
-    $$ = $1 + $2 + $3 + $4 + $5;
-  }
-| non_empty_static_array_pair_list ',' static_scalar {
+dereferencable:
+  variable
+| '(' expr ')' {
     $$ = $1 + $2 + $3;
   }
-| static_scalar T_DOUBLE_ARROW static_scalar {
+| dereferencable_scalar
+;
+
+callable_expr:
+  callable_variable
+| '(' expr ')' {
     $$ = $1 + $2 + $3;
   }
-| static_scalar
+| dereferencable_scalar
 ;
 
-expr:
-  r_variable
-| expr_without_variable
-;
-
-r_variable:
-  variable
-;
-
-w_variable:
-  variable
-;
-
-rw_variable:
-  variable
+callable_variable:
+  simple_variable
+| dereferencable '[' optional_expr ']' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| constant '[' optional_expr ']' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| dereferencable '{' expr '}' {
+    $$ = $1 + $2 + $3;
+  }
+| dereferencable T_OBJECT_OPERATOR property_name argument_list {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| function_call
 ;
 
 variable:
-  base_variable_with_function_calls T_OBJECT_OPERATOR object_property method_or_not variable_properties {
-    $$ = $1 + $2 + $3 + $4 + $5;
-  }
-| base_variable_with_function_calls
-;
-
-variable_properties:
-  variable_properties variable_property {
-    $$ = $1 + $2;
-  }
-| /* empty */ {
-    $$ = "";
-  }
-;
-
-variable_property:
-  T_OBJECT_OPERATOR object_property method_or_not {
+  callable_variable
+| static_member
+| dereferencable T_OBJECT_OPERATOR property_name {
     $$ = $1 + $2 + $3;
   }
 ;
 
-array_method_dereference:
-  array_method_dereference '[' dim_offset ']' {
+simple_variable:
+  T_VARIABLE
+| '$' '{' expr '}' {
     $$ = $1 + $2 + $3 + $4;
   }
-| method '[' dim_offset ']' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-;
-
-method:
-  '(' function_call_parameter_list ')' {
-    $$ = $1 + $2 + $3;
-  }
-;
-
-method_or_not:
-  method {
-    $$ = $1;
-  }
-| array_method_dereference {
-    $$ = $1;
-  }
-| /* empty */ {
-    $$ = "";
-  }
-;
-
-variable_without_objects:
-  reference_variable
-| simple_indirect_reference reference_variable {
+| '$' simple_variable {
     $$ = $1 + $2;
   }
 ;
 
 static_member:
-  class_name T_PAAMAYIM_NEKUDOTAYIM variable_without_objects {
+  class_name T_PAAMAYIM_NEKUDOTAYIM simple_variable {
     $$ = $1 + $2 + $3;
   }
-| variable_class_name T_PAAMAYIM_NEKUDOTAYIM variable_without_objects {
+| variable_class_name T_PAAMAYIM_NEKUDOTAYIM simple_variable {
     $$ = $1 + $2 + $3;
   }
 ;
 
-variable_class_name:
-  reference_variable
-;
-
-array_function_dereference:
-  array_function_dereference '[' dim_offset ']' {
+new_variable:
+  simple_variable
+| new_variable '[' optional_expr ']' {
     $$ = $1 + $2 + $3 + $4;
   }
-| function_call '[' dim_offset ']' {
+| new_variable '{' expr '}' {
     $$ = $1 + $2 + $3 + $4;
   }
-;
-
-base_variable_with_function_calls:
-  base_variable
-| array_function_dereference
-| function_call
-;
-
-base_variable:
-  reference_variable
-| simple_indirect_reference reference_variable {
-    $$ = $1 + $2;
-  }
-| static_member
-;
-
-reference_variable:
-  reference_variable '[' dim_offset ']' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| reference_variable '{' expr '}' {
+| new_variable T_OBJECT_OPERATOR property_name {
     $$ = $1 + $2 + $3;
   }
-| compound_variable
+| class_name T_PAAMAYIM_NEKUDOTAYIM simple_variable
+| new_variable T_PAAMAYIM_NEKUDOTAYIM simple_variable
 ;
 
-compound_variable:
-  T_VARIABLE
-| '$' '{' expr '}' {
-    $$ = $1 + $2 + $3 + $4;
+member_name:
+  identifier
+| '{' expr '}' {
+    $$ = $1 + $2 + $3;
   }
+| simple_variable
 ;
 
-dim_offset:
-  /* empty */ {
-    $$ = "";
-  }
-| expr
-;
-
-object_property:
-  object_dim_list
-| variable_without_objects
-;
-
-object_dim_list:
-  object_dim_list '[' dim_offset ']' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| object_dim_list '{' expr '}' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| variable_name
-| xhp_attribute_reference
-;
-
-variable_name:
+property_name:
   T_STRING
 | '{' expr '}' {
     $$ = $1 + $2 + $3;
   }
-;
-
-simple_indirect_reference:
-  '$'
-| simple_indirect_reference '$' {
-    $$ = $1 + $2;
-  }
-;
-
-assignment_list:
-  assignment_list ',' assignment_list_element {
-    $$ = $1 + $2 + $3;
-  }
-| assignment_list_element
-;
-
-assignment_list_element:
-  variable
-| T_LIST '(' assignment_list ')' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| /* empty */ {
-    $$ = "";
-  }
+| simple_variable
+| xhp_attribute_reference
 ;
 
 array_pair_list:
+  non_empty_array_pair_list
+;
+
+possible_array_pair:
   /* empty */ {
     $$ = "";
   }
-| non_empty_array_pair_list possible_comma
+| array_pair
 ;
 
 non_empty_array_pair_list:
-  non_empty_array_pair_list ',' expr T_DOUBLE_ARROW expr {
-    $$ = $1 + $2 + $3 + $4 + $5;
-  }
-| non_empty_array_pair_list ',' expr {
+  non_empty_array_pair_list ',' possible_array_pair {
     $$ = $1 + $2 + $3;
   }
-| expr T_DOUBLE_ARROW expr {
+| possible_array_pair
+;
+
+array_pair:
+  expr T_DOUBLE_ARROW expr {
     $$ = $1 + $2 + $3;
   }
 | expr
-| non_empty_array_pair_list ',' expr T_DOUBLE_ARROW '&' w_variable {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6;
-  }
-| non_empty_array_pair_list ',' '&' w_variable {
+| expr T_DOUBLE_ARROW '&' variable {
     $$ = $1 + $2 + $3 + $4;
   }
-| expr T_DOUBLE_ARROW '&' w_variable {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| '&' w_variable {
+| '&' variable {
     $$ = $1 + $2;
   }
+| expr T_DOUBLE_ARROW T_LIST '(' array_pair_list ')' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
+  }
+| T_LIST '(' array_pair_list ')' {
+    $$ = $1 + $2 + $3 + $4;
+  }
 ;
-
 
 encaps_list:
   T_ENCAPSED_AND_WHITESPACE {
@@ -1728,14 +1558,38 @@ encaps_var:
   T_VARIABLE {
     $$ = $1;
   }
+| T_VARIABLE '[' encaps_var_offset ']' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| T_VARIABLE T_OBJECT_OPERATOR T_STRING {
+    $$ = $1 + $2 + $3;
+  }
+| T_DOLLAR_OPEN_CURLY_BRACES expr '}' {
+    $$ = $1 + $2 + $3;
+  }
+| T_DOLLAR_OPEN_CURLY_BRACES T_STRING_VARNAME '}' {
+    $$ = $1 + $2 + $3;
+  }
+| T_DOLLAR_OPEN_CURLY_BRACES T_STRING_VARNAME '[' expr ']' '}' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
+  }
 | T_CURLY_OPEN variable '}' {
     $$ = $1 + $2 + $3;
   }
 ;
 
+encaps_var_offset:
+  T_STRING
+| T_NUM_STRING
+| '-' T_NUM_STRING {
+    $$ = $1 + $2;
+  }
+| T_VARIABLE
+;
+
 internal_functions_in_yacc:
-  T_ISSET '(' isset_variables ')' {
-    $$ = $1 + $2 + $3 + $4;
+  T_ISSET '(' isset_variables possible_comma ')' {
+    $$ = $1 + $2 + $3 + $4 + $5;
   }
 | T_EMPTY '(' variable ')' {
     $$ = $1 + $2 + $3 + $4;
@@ -1758,19 +1612,14 @@ internal_functions_in_yacc:
 ;
 
 isset_variables:
-  variable
-| isset_variables ',' variable {
+  isset_variable
+| isset_variables ',' isset_variable {
     $$ = $1 + $2 + $3;
   }
 ;
 
-class_constant:
-  class_name T_PAAMAYIM_NEKUDOTAYIM T_STRING {
-    $$ = $1 + $2 + $3;
-  }
-| variable_class_name T_PAAMAYIM_NEKUDOTAYIM T_STRING {
-    $$ = $1 + $2 + $3;
-  }
+isset_variable:
+  expr
 ;
 
 //
@@ -1783,6 +1632,16 @@ xhp_label_ws:
     xhp_bareword                       { $$ = $1 + "-" + $3;}
 ;
 
+
+ident_no_semireserved:
+    T_STRING
+  | T_XHP_ATTRIBUTE
+  | T_XHP_CATEGORY
+  | T_XHP_CHILDREN
+  | T_XHP_REQUIRED
+  | T_XHP_ENUM
+;
+
 xhp_bareword:
     ident_no_semireserved
   | T_EXIT
@@ -1790,7 +1649,6 @@ xhp_bareword:
   | T_CONST
   | T_RETURN
   | T_YIELD
-  | T_YIELD_FROM
   | T_TRY
   | T_CATCH
   | T_FINALLY
@@ -1862,7 +1720,7 @@ xhp_bareword:
 ;
 
 // Tags
-expr_without_variable:
+expr:
   xhp_tag_expression {
     $$ = $1;
     yyextra->used = true;
@@ -2002,8 +1860,15 @@ xhp_attribute_reference:
 ;
 
 // Elements
+class_type:
+  T_CLASS
+| class_modifiers T_CLASS {
+    $$ = $1 + " " + $2;
+  }
+;
+
 class_declaration_statement:
-  class_entry_type T_XHP_LABEL extends_from implements_list '{' {
+  class_type T_XHP_LABEL extends_from implements_list '{' {
     yyextra->expecting_xhp_class_statements = true;
     yyextra->attribute_decls = "";
     yyextra->attribute_inherit = "";
@@ -2137,19 +2002,34 @@ xhp_attribute_array_value_type:
   }
 ;
 
+xhp_attribute_enum_value:
+  T_LNUMBER
+| T_DNUMBER
+| T_CONSTANT_ENCAPSED_STRING
+| T_LINE
+| T_FILE
+| T_DIR
+| T_TRAIT_C
+| T_METHOD_C
+| T_FUNC_C
+| T_NS_C
+| T_CLASS_C
+| T_HEREDOC
+;
+
 xhp_attribute_enum:
-  common_scalar {
+  xhp_attribute_enum_value {
     $1.strip_lines();
     $$ = $1;
   }
-| xhp_attribute_enum ',' common_scalar {
+| xhp_attribute_enum ',' xhp_attribute_enum_value {
     $3.strip_lines();
     $$ = $1 + ", " + $3;
   }
 ;
 
 xhp_attribute_default:
-  '=' static_scalar {
+  '=' expr {
     $2.strip_lines();
     $$ = $2;
   }
@@ -2263,47 +2143,12 @@ xhp_children_decl_tag:
 ;
 
 // Make XHP classes usable anywhere you see a real class
-class_name:
+name:
   T_XHP_LABEL {
     yyextra->used = true;
     $1.xhpLabel(yyextra->force_global_namespace); $$ = $1;
   }
 ;
-
-fully_qualified_class_name:
-  T_XHP_LABEL {
-    yyextra->used = true;
-    $1.xhpLabel(yyextra->force_global_namespace); $$ = $1;
-  }
-;
-
-// Fix the "bug" in PHP's grammar where you can't chain the [] operator on a
-// function call.
-// This introduces some shift/reduce conflicts. We want the shift here to fall
-// back to regular PHP grammar. In the case where it's an extension of the PHP
-// grammar our code gets picked up.
-expr_without_variable:
-  expr '[' dim_offset ']' {
-    if (yyextra->idx_expr) {
-      yyextra->used = true;
-      $$ = (yyextra->force_global_namespace ? "\\__xhp_idx(" : "__xhp_idx(") + $1 + ", " + $3 + ")";
-    } else {
-      $$ = $1 + $2 + $3 + $4;
-    }
-  }
-| '[' array_pair_list ']' {
-    yyextra->used = true;
-    $$ = "array(" + $2 + ")";
-  }
-;
-
-static_scalar:
-  '[' static_array_pair_list ']' {
-    yyextra->used = true;
-    $$ = "array(" + $2 + ")";
-  }
-;
-
 
 %%
 

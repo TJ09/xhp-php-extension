@@ -5,4 +5,4 @@ XHP Constants
 
 echo T_XHP_LABEL;
 --EXPECT--
-419
+417
