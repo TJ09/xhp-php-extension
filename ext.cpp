@@ -47,7 +47,6 @@ typedef struct {
 //
 // Globals
 ZEND_BEGIN_MODULE_GLOBALS(xhp)
-  bool idx_expr;
   bool include_debug;
   bool force_global_namespace;
   bool moderate_parse;
@@ -159,7 +158,6 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) 
 
   memset(&flags, 0, sizeof(xhp_flags_t));
   flags.short_tags = 0;
-  flags.idx_expr = XHPG(idx_expr);
   flags.include_debug = XHPG(include_debug);
 #if PHP_VERSION_ID >= 50300
   flags.force_global_namespace = XHPG(force_global_namespace);
@@ -231,7 +229,6 @@ static zend_op_array* xhp_compile_string(zval* str, char *filename TSRMLS_DC) {
 
   memset(&flags, 0, sizeof(xhp_flags_t));
   flags.short_tags = 0;
-  flags.idx_expr = XHPG(idx_expr);
   flags.include_debug = XHPG(include_debug);
   flags.force_global_namespace = XHPG(force_global_namespace);
   flags.eval = true;
@@ -315,7 +312,6 @@ void xhp_tokenizer_register_constants(INIT_FUNC_ARGS);
 //
 // globals initialization
 static void php_xhp_init_globals(zend_xhp_globals* xhp_globals) {
-  xhp_globals->idx_expr = false;
   xhp_globals->include_debug = true;
   xhp_globals->force_global_namespace = true;
 }
@@ -323,7 +319,6 @@ static void php_xhp_init_globals(zend_xhp_globals* xhp_globals) {
 //
 // ini entry
 PHP_INI_BEGIN()
-  STD_PHP_INI_BOOLEAN("xhp.idx_expr", "0", PHP_INI_PERDIR, OnUpdateBool, idx_expr, zend_xhp_globals, xhp_globals)
   STD_PHP_INI_BOOLEAN("xhp.include_debug", "1", PHP_INI_PERDIR, OnUpdateBool, include_debug, zend_xhp_globals, xhp_globals)
   STD_PHP_INI_BOOLEAN("xhp.force_global_namespace", "1", PHP_INI_PERDIR, OnUpdateBool, force_global_namespace, zend_xhp_globals, xhp_globals)
   STD_PHP_INI_BOOLEAN("xhp.moderate_parse", "1", PHP_INI_PERDIR, OnUpdateBool, moderate_parse, zend_xhp_globals, xhp_globals)
@@ -374,148 +369,9 @@ static PHP_MINFO_FUNCTION(xhp) {
   php_info_print_table_start();
   php_info_print_table_row(2, "Version", PHP_XHP_VERSION);
   php_info_print_table_row(2, "Include Debug Info Into XHP Classes", XHPG(include_debug) ? "enabled" : "disabled");
-  php_info_print_table_row(2, "Manual Support For func_call()['key'] Syntax", XHPG(idx_expr) ? "enabled" : "disabled");
   php_info_print_table_row(2, "Force XHP Into The Global Namespace", XHPG(force_global_namespace) ? "enabled" : "disabled");
   php_info_print_table_row(2, "XHP Parser in Moderate", XHPG(moderate_parse) ? "enabled" : "disabled");
   php_info_print_table_end();
-}
-
-//
-// __xhp_idx
-ZEND_FUNCTION(__xhp_idx) {
-  zval *dict, *offset;
-  if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &dict, &offset) == FAILURE) {
-    RETURN_NULL();
-  }
-
-  switch (Z_TYPE_P(dict)) {
-    //
-    // These are always NULL
-    case IS_NULL:
-    case IS_TRUE:
-    case IS_FALSE:
-    case IS_LONG:
-    case IS_DOUBLE:
-    default:
-      RETURN_NULL();
-      break;
-
-    //
-    // array()[] -- Array index
-    case IS_ARRAY:
-      switch (Z_TYPE_P(offset)) {
-        case IS_RESOURCE:
-          zend_error(E_STRICT, "Resource ID#%ld used as offset, casting to integer (%ld)", Z_LVAL_P(offset), Z_LVAL_P(offset));
-          /* Fall Through */
-        case IS_DOUBLE:
-        case IS_TRUE:
-        case IS_FALSE:
-        case IS_LONG:
-          long loffset;
-          zval *value;
-          if (Z_TYPE_P(offset) == IS_DOUBLE) {
-            loffset = (long)Z_DVAL_P(offset);
-          } else if (Z_TYPE_P(offset) == IS_TRUE) {
-            loffset = 1;
-          } else if (Z_TYPE_P(offset) == IS_FALSE) {
-            loffset = 0;
-          } else {
-            loffset = Z_LVAL_P(offset);
-          }
-          value = zend_hash_index_find(Z_ARRVAL_P(dict), loffset);
-          if (value != NULL) {
-            *return_value = *value;
-            break;
-          }
-          zend_error(E_NOTICE, "Undefined offset:  %ld", loffset);
-          RETURN_NULL();
-          break;
-
-        case IS_STRING:
-          value = zend_symtable_find(Z_ARRVAL_P(dict), Z_STR_P(offset));
-          if (value != NULL) {
-            *return_value = *value;
-            break;
-          }
-          zend_error(E_NOTICE, "Undefined index:  %s", Z_STRVAL(*offset));
-          RETURN_NULL();
-          break;
-
-        case IS_NULL:
-          value = zend_hash_str_find(Z_ARRVAL_P(dict), "", sizeof("") - 1);
-          if (value != NULL) {
-            *return_value = *value;
-            break;
-          }
-          zend_error(E_NOTICE, "Undefined index:  ");
-          RETURN_NULL();
-          break;
-
-        default:
-          zend_error(E_WARNING, "Illegal offset type");
-          RETURN_NULL();
-          break;
-      }
-      break;
-
-    //
-    // 'string'[] -- String offset
-    case IS_STRING:
-      long loffset;
-      switch (Z_TYPE_P(offset)) {
-        case IS_LONG:
-        case IS_TRUE:
-          loffset = Z_LVAL_P(offset);
-          break;
-
-        case IS_DOUBLE:
-          loffset = (long)Z_DVAL_P(offset);
-          break;
-
-        case IS_FALSE:
-        case IS_NULL:
-          loffset = 0;
-          break;
-
-        case IS_STRING: {
-          zval tmp = *offset;
-          zval_copy_ctor(&tmp);
-          convert_to_long(&tmp);
-          loffset = Z_LVAL(tmp);
-          zval_dtor(&tmp);
-          break;
-        }
-
-        default:
-          zend_error(E_WARNING, "Illegal offset type");
-          RETURN_NULL();
-          break;
-      }
-      if (loffset < 0 || Z_STRLEN_P(dict) <= loffset) {
-        zend_error(E_NOTICE, "Uninitialized string offset: %ld", loffset);
-        RETURN_NULL();
-      }
-      RETURN_STRINGL(Z_STRVAL_P(dict) + loffset, 1);
-      break;
-
-    //
-    // (new foo)[] -- Object overload (ArrayAccess)
-    case IS_OBJECT:
-      if (!Z_OBJ_HT_P(dict)->read_dimension) {
-        zend_error(E_ERROR, "Cannot use object as array");
-        RETURN_NULL();
-      } else {
-        zval rv;
-        zval* overloaded_result = Z_OBJ_HT_P(dict)->read_dimension(dict, offset, BP_VAR_R, &rv /* TSRMLS_CC */);
-        if (overloaded_result) {
-          *return_value = *overloaded_result;
-        } else {
-          RETURN_NULL();
-        }
-      }
-      break;
-  }
-  zval_copy_ctor(return_value);
 }
 
 //
@@ -617,7 +473,6 @@ PHP_FUNCTION(xhp_rename_function)
 //
 // Module description
 zend_function_entry xhp_functions[] = {
-  ZEND_FE(__xhp_idx, NULL)
   ZEND_FE(xhp_preprocess_code, NULL)
   PHP_FE(xhp_token_get_all, NULL)
   PHP_FE(xhp_token_name, NULL)
