@@ -1,7 +1,7 @@
 --TEST--
 Types in Array
 --FILE--
-<?php //xhp
+<?php
 class Foo {}
 class :x {
   attribute

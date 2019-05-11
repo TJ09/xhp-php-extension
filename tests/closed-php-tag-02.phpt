@@ -1,7 +1,7 @@
 --TEST--
 Closing PHP tag inside control structures 02
 --FILE--
-<?php //xhp
+<?php
 
 if (true) {
 	if (true) {

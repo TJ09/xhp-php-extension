@@ -5,7 +5,7 @@ PHP5.5 List in Foreach 01
 if (version_compare(PHP_VERSION, '5.5', '<')) exit("Skip This test is for PHP 5.5 only.");
 ?>
 --FILE--
-<?php //xhp
+<?php
 
 $data = [
   ['p', 'a'],

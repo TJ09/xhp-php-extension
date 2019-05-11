@@ -1,4 +1,4 @@
-<?php //xhp
+<?php
 // Extremely simple implementation of XHP client library useful primarily for
 // namespace unit tests.
 

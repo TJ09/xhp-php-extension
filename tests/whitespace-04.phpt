@@ -1,7 +1,7 @@
 --TEST--
 Whitespace 04
 --FILE--
-<?php //xhp
+<?php
 require 'xhp_x.php';
 echo <x> <x /> {'a'} </x>;
 --EXPECT--

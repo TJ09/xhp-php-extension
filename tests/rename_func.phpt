@@ -1,7 +1,7 @@
 --TEST--
 xhp_rename_function
 --FILE--
-<?php //xhp
+<?php
 
 function a() {
 echo "a".PHP_EOL;

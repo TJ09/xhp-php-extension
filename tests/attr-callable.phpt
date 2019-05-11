@@ -1,7 +1,7 @@
 --TEST--
 Callable attribute parsing
 --FILE--
-<?php //xhp
+<?php
 class :foo {
   attribute
     callable b;

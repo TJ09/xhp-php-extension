@@ -1,7 +1,7 @@
 --TEST--
 XHP Class Attributes
 --FILE--
-<?php //xhp
+<?php
 class :foo {
   public static $bar;
   const etc = 1;

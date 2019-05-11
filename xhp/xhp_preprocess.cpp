@@ -40,10 +40,8 @@ XHPResult xhp_preprocess(string &in, string &out, bool isEval, string &errDescri
   memset(&flags, 0, sizeof(xhp_flags_t));
   flags.eval = isEval;
   flags.short_tags = true;
-  flags.idx_expr = false;
   flags.include_debug = true;
   flags.force_global_namespace = true;
-  flags.moderate_parse = false;
   return xhp_preprocess(in, out, errDescription, errLineno, flags);
 }
 
@@ -64,7 +62,6 @@ XHPResult xhp_preprocess(std::string &in, std::string &out, std::string &errDesc
   void* scanner;
   code_rope new_code;
   yy_extra_type extra;
-  extra.idx_expr = flags.idx_expr;
   extra.include_debug = flags.include_debug;
   extra.insert_token = flags.eval ? T_OPEN_TAG_FAKE : 0;
   extra.short_tags = flags.short_tags;

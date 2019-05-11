@@ -1,7 +1,7 @@
 --TEST--
 Reflection API 07
 --FILE--
-<?php //xhp
+<?php
 class foo {
   public $bar /** a */;
   function etc() {}

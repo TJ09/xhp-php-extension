@@ -1,7 +1,7 @@
 --TEST--
 Reflection API 04
 --FILE--
-<?php //xhp
+<?php
 abstract class foo {
   /** a */ abstract /** b */ public /** c */ function /** d */ bar /** e */ (/** f */);
 }

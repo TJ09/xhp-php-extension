@@ -1,7 +1,7 @@
 --TEST--
 XHP Attribute expanded inside string
 --FILE--
-<?php //xhp
+<?php
 require 'xhp_x.php';
 
 class :base extends :x {

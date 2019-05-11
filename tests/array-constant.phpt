@@ -1,7 +1,7 @@
 --TEST--
 Constant in Array
 --FILE--
-<?php //xhp
+<?php
 class :foo {
   const bar = 'pass';
 }

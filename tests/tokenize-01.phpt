@@ -1,7 +1,7 @@
 --TEST--
 xhp_token_get_all should return array
 --FILE--
-<?php //xhp
+<?php
 $tokens = xhp_token_get_all(<<<'code'
 <?php
 

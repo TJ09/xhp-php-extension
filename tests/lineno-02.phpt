@@ -1,7 +1,7 @@
 --TEST--
 Line Numbers 02
 --FILE--
-<?php //xhp
+<?php
 function foo() {
  return <x>&#187;
    </x>;

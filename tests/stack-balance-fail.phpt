@@ -1,7 +1,7 @@
 --TEST--
 Stack Balance Fail
 --FILE--
-<?php //xhp
+<?php
 class xhp_x__y {}
 class xhp_tag {
  const CONSTANT = 0;

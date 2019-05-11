@@ -1,7 +1,7 @@
 --TEST--
 XHP Constants
 --FILE--
-<?php //xhp
+<?php
 
 echo T_XHP_LABEL;
 --EXPECT--

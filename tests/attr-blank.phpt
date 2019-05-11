@@ -1,7 +1,7 @@
 --TEST--
 Blank attribute
 --FILE--
-<?php //xhp
+<?php
 class xhp_a {}
 $foo = <a b="" />;
 echo "pass";

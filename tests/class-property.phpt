@@ -1,7 +1,7 @@
 --TEST--
 XHP Classes with Property
 --FILE--
-<?php //xhp
+<?php
 class :x:a {
 protected $morphClass = __FILE__ . 'SomeStr';
 public function getOne(): string

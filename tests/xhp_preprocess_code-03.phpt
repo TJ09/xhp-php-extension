@@ -1,7 +1,7 @@
 --TEST--
 xhp_preprocess_code 03
 --FILE--
-<?php //xhp
+<?php
 $xhp = <<<XHP
 <?php
 class :thing {

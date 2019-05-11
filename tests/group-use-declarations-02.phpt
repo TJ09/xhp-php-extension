@@ -1,7 +1,7 @@
 --TEST--
 PHP7 Group Use Declarations 02
 --FILE--
-<?php //xhp
+<?php
 
 use function Foo\{Bar, Baz};
 use OtherFoo\{

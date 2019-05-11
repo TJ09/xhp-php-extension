@@ -1,7 +1,7 @@
 --TEST--
 xhp_preprocess_code 04
 --FILE--
-<?php //xhp
+<?php
 $xhp = <<<XHP
 <?php
 class thing {

@@ -1,7 +1,7 @@
 --TEST--
 Line Numbers 01
 --FILE--
-<?php //xhp
+<?php
 class :thing {
   attribute
     Thing a,

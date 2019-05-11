@@ -1,9 +1,9 @@
 --TEST--
 xhp_preprocess_code 02
 --FILE--
-<?php //xhp
+<?php
 $xhp = <<<XHP
-<?php //xhp
+<?php
 class :thing
 }
 XHP;

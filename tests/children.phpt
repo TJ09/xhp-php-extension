@@ -1,7 +1,7 @@
 --TEST--
 XHP Children Content
 --FILE--
-<?php //xhp
+<?php
 require 'xhp_x.php';
 echo <x>Se&lt;l'ama"t Ma'l"am &copy;</x>;
 --EXPECT--

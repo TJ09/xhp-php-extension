@@ -1,7 +1,7 @@
 --TEST--
 XHP Function Call Param
 --FILE--
-<?php //xhp
+<?php
 function id($i) { return $i; }
 class xhp_thing {
   public function exist() {}

@@ -5,7 +5,7 @@ Symmetric Array Destructuring 01
 if (version_compare(PHP_VERSION, '7.1', '<')) exit("Skip This test is for PHP 7.1+.");
 ?>
 --FILE--
-<?php //xhp
+<?php
 class :x {}
 
 [$x, $y] = [3,4];
