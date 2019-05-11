@@ -21,7 +21,7 @@
 #endif
 #include "php.h"
 
-#define PHP_XHP_VERSION "1.8.0"
+#define PHP_XHP_VERSION "1.8.1"
 #define PHP_XHP_EXTNAME "xhp"
 
 extern zend_module_entry xhp_module_entry;

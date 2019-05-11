@@ -358,7 +358,7 @@ group_use_declaration:
   namespace_name T_NS_SEPARATOR '{' unprefixed_use_declarations possible_comma '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
-  T_NS_SEPARATOR namespace_name T_NS_SEPARATOR '{' unprefixed_use_declarations possible_comma '}' {
+| T_NS_SEPARATOR namespace_name T_NS_SEPARATOR '{' unprefixed_use_declarations possible_comma '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
   }
 ;
@@ -367,7 +367,7 @@ mixed_group_use_declaration:
   namespace_name T_NS_SEPARATOR '{' inline_use_declarations possible_comma '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
-  T_NS_SEPARATOR namespace_name T_NS_SEPARATOR '{' inline_use_declarations possible_comma '}' {
+| T_NS_SEPARATOR namespace_name T_NS_SEPARATOR '{' inline_use_declarations possible_comma '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
   }
 ;
