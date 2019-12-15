@@ -490,6 +490,8 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "+=" tok(T_PLUS_EQUAL);
   "-=" tok(T_MINUS_EQUAL);
   "*=" tok(T_MUL_EQUAL);
+  "**" tok(T_POW);
+  "**=" tok(T_POW_EQUAL);
   "/=" tok(T_DIV_EQUAL);
   ".=" tok(T_CONCAT_EQUAL);
   "%=" tok(T_MOD_EQUAL);

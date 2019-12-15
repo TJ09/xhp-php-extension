@@ -58,10 +58,6 @@ ZEND_DECLARE_MODULE_GLOBALS(xhp)
 # define XHPG(i) (xhp_globals.i)
 #endif
 
-//
-// PHP 5.3 helper functions
-#if PHP_VERSION_ID >= 50300
-
 // These functions wese made static to zend_stream.c in r255174. These an inline copies of those functions.
 static int zend_stream_getc(zend_file_handle *file_handle TSRMLS_DC) {
   char buf;
@@ -73,20 +69,15 @@ static int zend_stream_getc(zend_file_handle *file_handle TSRMLS_DC) {
 }
 
 static size_t zend_stream_read(zend_file_handle *file_handle, char *buf, size_t len TSRMLS_DC) {
+#if PHP_VERSION_ID >= 70400
+  if (file_handle->handle.stream.isatty) {
+#else
   if (file_handle->type != ZEND_HANDLE_MAPPED && file_handle->handle.stream.isatty) {
+#endif
     int c = '*';
     size_t n;
 
-#ifdef NETWARE
-    /*
-      c != 4 check is there as fread of a character in NetWare LibC gives 4 upon ^D character.
-      Ascii value 4 is actually EOT character which is not defined anywhere in the LibC
-      or else we can use instead of hardcoded 4.
-    */
-    for (n = 0; n < len && (c = zend_stream_getc(file_handle TSRMLS_CC)) != EOF && c != 4 && c != '\n'; ++n) {
-#else
     for (n = 0; n < len && (c = zend_stream_getc(file_handle TSRMLS_CC)) != EOF && c != '\n'; ++n)  {
-#endif
         buf[n] = (char)c;
     }
     if (c == '\n') {
@@ -97,7 +88,6 @@ static size_t zend_stream_read(zend_file_handle *file_handle, char *buf, size_t 
   }
   return file_handle->handle.stream.reader(file_handle->handle.stream.handle, buf, len TSRMLS_CC);
 }
-#endif
 
 //
 // XHP Streams
@@ -130,15 +120,16 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) 
 
   // Grab code from zend file handle
   string original_code;
-#if PHP_VERSION_ID >= 50300
+#if PHP_VERSION_ID >= 70400
+  if (f->buf) {
+    original_code = f->buf;
+  }
+#else
   if (f->type == ZEND_HANDLE_MAPPED) {
     original_code = f->handle.stream.mmap.buf;
   }
-#else
-  if (0);
 #endif
   else {
-
     // Read full program from zend stream
     char read_buf[4096];
     size_t len;
@@ -184,16 +175,25 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) 
   zend_file_handle fake_file;
   memset(&fake_file, 0, sizeof(zend_file_handle));
 
+#if PHP_VERSION_ID >= 70400
+  fake_file.type = ZEND_HANDLE_FILENAME;
+#else
   fake_file.type = ZEND_HANDLE_MAPPED;
+#endif
 
   fake_file.opened_path = f->opened_path ? zend_string_copy(f->opened_path) : NULL;
   fake_file.filename = f->filename;
   fake_file.free_filename = false;
 
   fake_file.handle.stream.isatty = 0;
+#if PHP_VERSION_ID >= 70400
+  fake_file.buf = estrdup(const_cast<char*>(code_to_give_to_php->c_str()));
+  fake_file.len = code_to_give_to_php->size();
+#else
   fake_file.handle.stream.mmap.pos = 0;
   fake_file.handle.stream.mmap.buf = const_cast<char*>(code_to_give_to_php->c_str());
   fake_file.handle.stream.mmap.len = code_to_give_to_php->size();
+#endif
   fake_file.handle.stream.closer = NULL;
 
   // TODO: should check for bailout
