@@ -81,7 +81,7 @@ XHPResult xhp_preprocess(std::string &in, std::string &out, std::string &errDesc
     errDescription = extra.error;
     errLineno = extra.lineno;
     return XHPErred;
-  } else if (extra.used || extra.hh_tags) {
+  } else if (extra.used) {
     out = new_code.c_str();
     return XHPRewrote;
   } else {
