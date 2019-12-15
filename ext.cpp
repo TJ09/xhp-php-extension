@@ -149,11 +149,7 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) 
   memset(&flags, 0, sizeof(xhp_flags_t));
   flags.short_tags = CG(short_tags);
   flags.include_debug = XHPG(include_debug);
-#if PHP_VERSION_ID >= 50300
   flags.force_global_namespace = XHPG(force_global_namespace);
-#else
-  flags.force_global_namespace = false;
-#endif
   result = xhp_preprocess(original_code, rewrit, error_str, error_lineno, flags);
 
   if (result == XHPErred) {
