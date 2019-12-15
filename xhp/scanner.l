@@ -233,11 +233,11 @@ static bool shouldReturnToken(int t, bool force)
 
  /* Definitions (Substitutions) */
 
-LNUM [0-9]+
-DNUM ([0-9]*"."[0-9]+)|([0-9]+"."[0-9]*)
+LNUM [0-9]+(_[0-9]+)*
+DNUM ({LNUM}?"."{LNUM})|({LNUM}"."{LNUM}?)
 EXPONENT_DNUM (({LNUM}|{DNUM})[eE][+-]?{LNUM})
-HNUM "0x"[0-9a-fA-F]+
-BNUM "0b"[01]+
+HNUM "0x"[0-9a-fA-F]+(_[0-9a-fA-F]+)*
+BNUM "0b"[01]+(_[01]+)*
 LABEL_START [a-zA-Z_\x7f-\xff]
 LABEL {LABEL_START}[a-zA-Z0-9_\x7f-\xff]*
 ANY_CHAR (.|[\n])
@@ -421,6 +421,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   break tok(T_BREAK);
   continue tok(T_CONTINUE);
   goto tok(T_GOTO);
+  fn tok(T_FN);
   function tok(T_FUNCTION);
   const tok(T_CONST);
   return tok(T_RETURN);
@@ -500,6 +501,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "^=" tok(T_XOR_EQUAL);
   "<<=" tok(T_SL_EQUAL);
   ">>=" tok(T_SR_EQUAL);
+  "??=" tok(T_COALESCE_EQUAL);
   "||" tok(T_BOOLEAN_OR);
   "&&" tok(T_BOOLEAN_AND);
   "==" tok(T_IS_EQUAL);
@@ -542,8 +544,6 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "("{TABS_AND_SPACES}(int|integer){TABS_AND_SPACES}")" tok(T_INT_CAST);
   "("{TABS_AND_SPACES}(real|double|float){TABS_AND_SPACES}")" tok(T_DOUBLE_CAST);
   "("{TABS_AND_SPACES}string{TABS_AND_SPACES}")" tok(T_STRING_CAST);
-  "("{TABS_AND_SPACES}unicode{TABS_AND_SPACES}")" tok(T_UNICODE_CAST);
-  "("{TABS_AND_SPACES}binary{TABS_AND_SPACES}")" tok(T_BINARY_CAST);
   "("{TABS_AND_SPACES}array{TABS_AND_SPACES}")" tok(T_ARRAY_CAST);
   "("{TABS_AND_SPACES}object{TABS_AND_SPACES}")" tok(T_OBJECT_CAST);
   "("{TABS_AND_SPACES}(bool|boolean){TABS_AND_SPACES}")" tok(T_BOOL_CAST);

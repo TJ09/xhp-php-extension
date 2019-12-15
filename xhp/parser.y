@@ -56,22 +56,23 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %}
 
 %expect 0
-%name-prefix "xhp"
-%pure-parser
+%define api.prefix {xhp}
+%define api.pure full
 %parse-param { void* yyscanner }
 %parse-param { code_rope* root }
 %lex-param { void* yyscanner }
-%error-verbose
+%define parse.error verbose
 
-%left T_INCLUDE T_INCLUDE_ONCE T_EVAL T_REQUIRE T_REQUIRE_ONCE
+%precedence T_INCLUDE T_INCLUDE_ONCE T_REQUIRE T_REQUIRE_ONCE
 %left ','
 %left T_LOGICAL_OR
 %left T_LOGICAL_XOR
 %left T_LOGICAL_AND
-%right T_PRINT
-%right T_YIELD
-%right T_YIELD_FROM
-%left '=' T_PLUS_EQUAL T_MINUS_EQUAL T_MUL_EQUAL T_DIV_EQUAL T_CONCAT_EQUAL T_MOD_EQUAL T_AND_EQUAL T_OR_EQUAL T_XOR_EQUAL T_SL_EQUAL T_SR_EQUAL T_POW_EQUAL
+%precedence T_PRINT
+%precedence T_YIELD
+%precedence T_DOUBLE_ARROW
+%precedence T_YIELD_FROM
+%precedence '=' T_PLUS_EQUAL T_MINUS_EQUAL T_MUL_EQUAL T_DIV_EQUAL T_CONCAT_EQUAL T_MOD_EQUAL T_AND_EQUAL T_OR_EQUAL T_XOR_EQUAL T_SL_EQUAL T_SR_EQUAL T_POW_EQUAL T_COALESCE_EQUAL
 %left '?' ':'
 %right T_COALESCE
 %left T_BOOLEAN_OR
@@ -81,103 +82,104 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %left '&'
 %nonassoc T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_SPACESHIP
 %nonassoc '<' T_IS_SMALLER_OR_EQUAL '>' T_IS_GREATER_OR_EQUAL
+%left '.'
 %left T_SL T_SR
-%left '+' '-' '.'
+%left '+' '-'
 %left '*' '/' '%'
-%right '!'
-%nonassoc T_INSTANCEOF
-%right '~' T_INC T_DEC T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_UNICODE_CAST T_BINARY_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST '@'
+%precedence '!'
+%precedence T_INSTANCEOF
+%precedence '~' T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST '@'
 %right T_POW
-%right '['
-%nonassoc T_NEW T_CLONE
-%left T_NOELSE
-%left T_ELSEIF
-%left T_ELSE
-%left T_ENDIF
-%right T_STATIC T_ABSTRACT T_FINAL T_PRIVATE T_PROTECTED T_PUBLIC
-%right T_DOUBLE_ARROW
+%precedence T_NEW T_CLONE
 
-%token T_EXIT 326
-%token T_IF 327
+/* Resolve danging else conflict */
+%precedence T_NOELSE
+%precedence T_ELSEIF
+%precedence T_ELSE
 
-%token T_LNUMBER 317
-%token T_DNUMBER 318
-%token T_STRING 319
-%token T_STRING_VARNAME 324
-%token T_VARIABLE 320
-%token T_NUM_STRING 325
-%token T_INLINE_HTML 321
-%token T_ENCAPSED_AND_WHITESPACE 322
-%token T_CONSTANT_ENCAPSED_STRING 323
+%token T_EXIT 321
+%token T_IF 322
+
+%token T_LNUMBER 309
+%token T_DNUMBER 310
+%token T_STRING 311
+%token T_STRING_VARNAME 316
+%token T_VARIABLE 312
+%token T_NUM_STRING 317
+%token T_INLINE_HTML 313
+%token T_ENCAPSED_AND_WHITESPACE 314
+%token T_CONSTANT_ENCAPSED_STRING 315
 
 %token T_BACKTICKS_EXPR /* new in XHP; replaces '`' backticks_expr '`' */
-%token T_ECHO 328
-%token T_DO 329
-%token T_WHILE 330
-%token T_ENDWHILE 331
-%token T_FOR 332
-%token T_ENDFOR 333
-%token T_FOREACH 334
-%token T_ENDFOREACH 335
-%token T_DECLARE 336
-%token T_ENDDECLARE 337
-%token T_AS 338
-%token T_SWITCH 339
-%token T_ENDSWITCH 340
-%token T_CASE 341
-%token T_DEFAULT 342
-%token T_BREAK 343
-%token T_CONTINUE 344
-%token T_GOTO 345
-%token T_FUNCTION 346
-%token T_CONST 347
-%token T_RETURN 348
-%token T_TRY 349
-%token T_CATCH 350
-%token T_FINALLY 351
-%token T_THROW 352
-%token T_USE 353
-%token T_GLOBAL 355
-%token T_VAR 356
-%token T_UNSET 357
-%token T_ISSET 358
-%token T_EMPTY 359
-%token T_HALT_COMPILER 360
-%token T_CLASS 361
-%token T_INTERFACE 363
-%token T_EXTENDS 364
-%token T_IMPLEMENTS 365
-%token T_OBJECT_OPERATOR 366
+%token T_ECHO 324
+%token T_DO 325
+%token T_WHILE 326
+%token T_ENDWHILE 327
+%token T_FOR 328
+%token T_ENDFOR 329
+%token T_FOREACH 330
+%token T_ENDFOREACH 331
+%token T_DECLARE 332
+%token T_ENDDECLARE 333
+%token T_AS 334
+%token T_SWITCH 335
+%token T_ENDSWITCH 336
+%token T_CASE 337
+%token T_DEFAULT 338
+%token T_BREAK 339
+%token T_FN 343
+%token T_CONTINUE 340
+%token T_GOTO 341
+%token T_FUNCTION 342
+%token T_CONST 344
+%token T_RETURN 345
+%token T_TRY 346
+%token T_CATCH 347
+%token T_FINALLY 348
+%token T_THROW 349
+%token T_USE 350
+%token T_GLOBAL 352
+%token T_VAR 359
+%token T_UNSET 360
+%token T_ISSET 361
+%token T_EMPTY 362
+%token T_HALT_COMPILER 363
+%token T_CLASS 364
+%token T_INTERFACE 366
+%token T_EXTENDS 367
+%token T_IMPLEMENTS 368
+%token T_OBJECT_OPERATOR 369
 %token T_DOUBLE_ARROW 268
-%token T_LIST 367
-%token T_ARRAY 368
-%token T_CALLABLE 369
-%token T_CLASS_C 373
-%token T_METHOD_C 375
-%token T_FUNC_C 376
-%token T_TRAIT_C 374
-%token T_LINE 370
-%token T_FILE 371
-%token T_COMMENT 377
-%token T_DOC_COMMENT 378
-%token T_OPEN_TAG 379
-%token T_OPEN_TAG_WITH_ECHO 380
+%token T_LIST 370
+%token T_ARRAY 371
+%token T_CALLABLE 372
+%token T_CLASS_C 376
+%token T_METHOD_C 378
+%token T_FUNC_C 379
+%token T_TRAIT_C 377
+%token T_LINE 373
+%token T_FILE 374
+%token T_COMMENT 380
+%token T_DOC_COMMENT 381
+%token T_OPEN_TAG 382
+%token T_OPEN_TAG_WITH_ECHO 383
 %token T_OPEN_TAG_FAKE
-%token T_CLOSE_TAG 381
-%token T_WHITESPACE 382
+%token T_CLOSE_TAG 384
+%token T_WHITESPACE 385
 %token T_HEREDOC
-%token T_CURLY_OPEN 386
-%token T_DOLLAR_OPEN_CURLY_BRACES 385
-%token T_PAAMAYIM_NEKUDOTAYIM 387
-%token T_NAMESPACE 388
-%token T_NS_C 389
-%token T_DIR 372
-%token T_NS_SEPARATOR 390
-%token T_ELLIPSIS 391
-%token T_TRAIT 362
-%token T_INSTEADOF 354
+%token T_CURLY_OPEN 389
+%token T_DOLLAR_OPEN_CURLY_BRACES 388
+%token T_PAAMAYIM_NEKUDOTAYIM 390
+%token T_NAMESPACE 391
+%token T_NS_C 392
+%token T_DIR 375
+%token T_NS_SEPARATOR 393
+%token T_ELLIPSIS 394
+%token T_TRAIT 365
+%token T_INSTEADOF 351
 %token T_YIELD 267
-%token T_COALESCE 282
+%token T_COALESCE_EQUAL 282
+%token T_COALESCE 283
 
 %token T_XHP_WHITESPACE
 %token T_XHP_TEXT
@@ -206,39 +208,39 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_UNRESOLVED_OP
 %token T_UNRESOLVED_LT
 
-%token T_PUBLIC 316
-%token T_PROTECTED 315
-%token T_PRIVATE 314
-%token T_FINAL 313
-%token T_ABSTRACT 312
-%token T_STATIC 311
-%token T_ENDIF 310
-%token T_ELSE 309
-%token T_ELSEIF 308
-%token T_CLONE 306
-%token T_NEW 305
-%token T_POW 304
-%token T_UNSET_CAST 303
-%token T_BOOL_CAST 302
-%token T_OBJECT_CAST 301
-%token T_ARRAY_CAST 300
-%token T_STRING_CAST 299
-%token T_DOUBLE_CAST 298
-%token T_INT_CAST 297
-%token T_DEC 296
-%token T_INC 295
-%token T_INSTANCEOF 294
-%token T_SR 293
-%token T_SL 292
-%token T_IS_GREATER_OR_EQUAL 291
-%token T_IS_SMALLER_OR_EQUAL 290
-%token T_SPACESHIP 289
-%token T_IS_NOT_IDENTICAL 288
-%token T_IS_IDENTICAL 287
-%token T_IS_NOT_EQUAL 286
-%token T_IS_EQUAL 285
-%token T_BOOLEAN_AND 284
-%token T_BOOLEAN_OR 283
+%token T_PUBLIC 358
+%token T_PROTECTED 357
+%token T_PRIVATE 356
+%token T_FINAL 355
+%token T_ABSTRACT 354
+%token T_STATIC 353
+%token T_ENDIF 323
+%token T_ELSE 308
+%token T_ELSEIF 307
+%token T_CLONE 305
+%token T_NEW 304
+%token T_POW 303
+%token T_UNSET_CAST 302
+%token T_BOOL_CAST 301
+%token T_OBJECT_CAST 300
+%token T_ARRAY_CAST 299
+%token T_STRING_CAST 298
+%token T_DOUBLE_CAST 297
+%token T_INT_CAST 296
+%token T_DEC 320
+%token T_INC 319
+%token T_INSTANCEOF 295
+%token T_SR 294
+%token T_SL 293
+%token T_IS_GREATER_OR_EQUAL 292
+%token T_IS_SMALLER_OR_EQUAL 291
+%token T_SPACESHIP 290
+%token T_IS_NOT_IDENTICAL 289
+%token T_IS_IDENTICAL 288
+%token T_IS_NOT_EQUAL 287
+%token T_IS_EQUAL 286
+%token T_BOOLEAN_AND 285
+%token T_BOOLEAN_OR 284
 %token T_POW_EQUAL 281
 %token T_SR_EQUAL 280
 %token T_SL_EQUAL 279
@@ -258,9 +260,9 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_LOGICAL_OR 263
 %token T_REQUIRE_ONCE 262
 %token T_REQUIRE 261
-%token T_EVAL 260
-%token T_INCLUDE_ONCE 259
-%token T_INCLUDE 258
+%token T_EVAL 318
+%token T_INCLUDE_ONCE 260
+%token T_INCLUDE 259
 %%
 
 start:
@@ -276,7 +278,7 @@ reserved_non_modifiers:
 | T_THROW | T_USE | T_INSTEADOF | T_GLOBAL | T_VAR | T_UNSET | T_ISSET | T_EMPTY | T_CONTINUE | T_GOTO
 | T_FUNCTION | T_CONST | T_RETURN | T_PRINT | T_YIELD | T_LIST | T_SWITCH | T_ENDSWITCH | T_CASE | T_DEFAULT | T_BREAK
 | T_ARRAY | T_CALLABLE | T_EXTENDS | T_IMPLEMENTS | T_NAMESPACE | T_TRAIT | T_INTERFACE | T_CLASS
-| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C
+| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C | T_FN
 ;
 
 semi_reserved:
@@ -861,8 +863,8 @@ class_statement_list:
 ;
 
 class_statement:
-  variable_modifiers property_list ';' {
-    $$ = $1 + " " + $2 + $3;
+  variable_modifiers optional_type property_list ';' {
+    $$ = $1 + " " + $2 + $3 + $4;
   }
 | method_modifiers T_CONST class_const_list ';' {
     $$ = $1 + $2 + " " + $3 + $4;
@@ -1113,6 +1115,9 @@ expr:
 | variable T_SR_EQUAL expr {
     $$ = $1 + $2 + $3;
   }
+| variable T_COALESCE_EQUAL expr {
+    $$ = $1 + $2 + $3;
+  }
 | variable T_INC {
     $$ = $1 + $2;
   }
@@ -1176,10 +1181,10 @@ expr:
 | expr T_SR expr {
     $$ = $1 + $2 + $3;
   }
-| '+' expr %prec T_INC {
+| '+' expr %prec '~' {
     $$ = $1 + $2;
   }
-| '-' expr %prec T_INC {
+| '-' expr %prec '~' {
     $$ = $1 + $2;
   }
 | '!' expr {
@@ -1240,12 +1245,6 @@ expr:
 | T_STRING_CAST expr {
     $$ = $1 + $2;
   }
-| T_UNICODE_CAST expr {
-    $$ = $1 + $2;
-  }
-| T_BINARY_CAST expr {
-    $$ = $1 + $2;
-  }
 | T_ARRAY_CAST expr {
     $$ = $1 + $2;
   }
@@ -1279,12 +1278,25 @@ expr:
 | T_YIELD_FROM expr {
     $$ = $1 + $2;
   }
-| function returns_ref '(' parameter_list ')' lexical_vars return_type '{' inner_statement_list '}' {
+| inline_function {
+    $$ = $1;
+  }
+| T_STATIC inline_function {
+    $$ = $1 + $2;
+  }
+;
+
+inline_function:
+  function returns_ref '(' parameter_list ')' lexical_vars return_type '{' inner_statement_list '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10;
   }
-| T_STATIC function returns_ref '(' parameter_list ')' lexical_vars return_type '{' inner_statement_list '}' {
-    $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10 + $11;
+| fn returns_ref '(' parameter_list ')' return_type T_DOUBLE_ARROW expr {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + $8;
   }
+;
+
+fn:
+  T_FN
 ;
 
 function:
@@ -1531,6 +1543,9 @@ array_pair:
     $$ = $1 + $2 + $3 + $4;
   }
 | '&' variable {
+    $$ = $1 + $2;
+  }
+| T_ELLIPSIS expr {
     $$ = $1 + $2;
   }
 | expr T_DOUBLE_ARROW T_LIST '(' array_pair_list ')' {
