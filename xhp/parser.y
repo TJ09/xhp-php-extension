@@ -617,9 +617,11 @@ interface_declaration_statement:
 
 extends_from:
   /* empty */ {
+    yyextra->has_parent = false;
     $$ = "";
   }
 | T_EXTENDS name {
+    yyextra->has_parent = true;
     $$ = " " + $1 + " " + $2;
   }
 ;
@@ -1885,7 +1887,10 @@ class_declaration_statement:
           "if ($_ === -1) {" +
             "$_ = array(" + yyextra->attribute_decls + ") + " +
               yyextra->attribute_inherit +
-              "parent::__xhpAttributeDeclaration();" +
+              (yyextra->has_parent
+                ? "parent::__xhpAttributeDeclaration();"
+                : "[];"
+              ) +
           "}" +
           "return $_;"
         "}";
