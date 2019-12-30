@@ -112,11 +112,16 @@ long xhp_stream_fteller(xhp_stream_t* handle TSRMLS_DC) {
 //
 // PHP compilation intercepter
 static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) {
+  // open_file_for_scanning will reset this value, so we need to preserve its
+  // initial state and restore it later.
+  zend_bool skip_shebang_tmp = CG(skip_shebang);
 
   if (!f || open_file_for_scanning(f TSRMLS_CC) == FAILURE) {
+    CG(skip_shebang) = skip_shebang_tmp;
     // If opening the file fails just send it to the original func
     return dist_compile_file(f, type TSRMLS_CC);
   }
+  CG(skip_shebang) = skip_shebang_tmp;
 
   // Grab code from zend file handle
   string original_code;
