@@ -112,16 +112,22 @@ long xhp_stream_fteller(xhp_stream_t* handle TSRMLS_DC) {
 //
 // PHP compilation intercepter
 static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) {
+#if PHP_VERSION_ID >= 70400
   // open_file_for_scanning will reset this value, so we need to preserve its
   // initial state and restore it later.
   zend_bool skip_shebang_tmp = CG(skip_shebang);
+#endif
 
   if (!f || open_file_for_scanning(f TSRMLS_CC) == FAILURE) {
+#if PHP_VERSION_ID >= 70400
     CG(skip_shebang) = skip_shebang_tmp;
+#endif
     // If opening the file fails just send it to the original func
     return dist_compile_file(f, type TSRMLS_CC);
   }
+#if PHP_VERSION_ID >= 70400
   CG(skip_shebang) = skip_shebang_tmp;
+#endif
 
   // Grab code from zend file handle
   string original_code;
