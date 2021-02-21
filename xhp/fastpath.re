@@ -74,8 +74,8 @@ bool xhp_fastpath(const char* yy, const size_t len, const xhp_flags_t &flags) {
       state = HTML;
       continue;
     }
-    <PHP> 'b'?'\''('\\'.|'\\\n'|[^\x00\\']+)*'\''|
-          'b'?'\"'('\\'.|'\\\n'|[^\x00\\"]+)*'\"' { continue; }
+    <PHP> 'b'?'\''('\\'.|'\\\n'|[^\\']+)*'\''|
+          'b'?'\"'('\\'.|'\\\n'|[^\\"]+)*'\"' { continue; }
     <PHP> '#'|'//' {
       state = COMMENT_EOL;
       continue;
