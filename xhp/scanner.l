@@ -509,6 +509,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "!="|"<>" tok(T_IS_NOT_EQUAL);
   "===" tok(T_IS_IDENTICAL);
   "!==" tok(T_IS_NOT_IDENTICAL);
+  "<=>" tok(T_SPACESHIP);
   "<=" tok(T_IS_SMALLER_OR_EQUAL);
   ">=" tok(T_IS_GREATER_OR_EQUAL);
   "<<" tok(T_SL);
