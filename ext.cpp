@@ -27,8 +27,6 @@
 #include "zend_extensions.h"
 #include "ext/standard/info.h"
 #include <string>
-#include <sstream>
-#include <iostream>
 using namespace std;
 
 //
