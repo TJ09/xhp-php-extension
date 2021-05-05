@@ -33,8 +33,8 @@ using namespace std;
 
 //
 // Decls
-typedef zend_op_array* (zend_compile_file_t)(zend_file_handle*, int TSRMLS_DC);
-typedef zend_op_array* (zend_compile_string_t)(zval*, char* TSRMLS_DC);
+typedef zend_op_array* (zend_compile_file_t)(zend_file_handle*, int);
+typedef zend_op_array* (zend_compile_string_t)(zval*, char*);
 static zend_compile_file_t* dist_compile_file;
 static zend_compile_string_t* dist_compile_string;
 
@@ -59,16 +59,16 @@ ZEND_DECLARE_MODULE_GLOBALS(xhp)
 #endif
 
 // These functions wese made static to zend_stream.c in r255174. These an inline copies of those functions.
-static int zend_stream_getc(zend_file_handle *file_handle TSRMLS_DC) {
+static int zend_stream_getc(zend_file_handle *file_handle) {
   char buf;
 
-  if (file_handle->handle.stream.reader(file_handle->handle.stream.handle, &buf, sizeof(buf) TSRMLS_CC)) {
+  if (file_handle->handle.stream.reader(file_handle->handle.stream.handle, &buf, sizeof(buf))) {
     return (int)buf;
   }
   return EOF;
 }
 
-static size_t zend_stream_read(zend_file_handle *file_handle, char *buf, size_t len TSRMLS_DC) {
+static size_t zend_stream_read(zend_file_handle *file_handle, char *buf, size_t len) {
 #if PHP_VERSION_ID >= 70400
   if (file_handle->handle.stream.isatty) {
 #else
@@ -77,7 +77,7 @@ static size_t zend_stream_read(zend_file_handle *file_handle, char *buf, size_t 
     int c = '*';
     size_t n;
 
-    for (n = 0; n < len && (c = zend_stream_getc(file_handle TSRMLS_CC)) != EOF && c != '\n'; ++n)  {
+    for (n = 0; n < len && (c = zend_stream_getc(file_handle)) != EOF && c != '\n'; ++n)  {
         buf[n] = (char)c;
     }
     if (c == '\n') {
@@ -86,12 +86,12 @@ static size_t zend_stream_read(zend_file_handle *file_handle, char *buf, size_t 
 
     return n;
   }
-  return file_handle->handle.stream.reader(file_handle->handle.stream.handle, buf, len TSRMLS_CC);
+  return file_handle->handle.stream.reader(file_handle->handle.stream.handle, buf, len);
 }
 
 //
 // XHP Streams
-size_t xhp_stream_reader(xhp_stream_t* handle, char* buf, size_t len TSRMLS_DC) {
+size_t xhp_stream_reader(xhp_stream_t* handle, char* buf, size_t len) {
   if (len > handle->len - handle->pos) {
     len = handle->len - handle->pos;
   }
@@ -105,25 +105,25 @@ size_t xhp_stream_reader(xhp_stream_t* handle, char* buf, size_t len TSRMLS_DC) 
   }
 }
 
-long xhp_stream_fteller(xhp_stream_t* handle TSRMLS_DC) {
+long xhp_stream_fteller(xhp_stream_t* handle) {
   return (long)handle->pos;
 }
 
 //
 // PHP compilation intercepter
-static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) {
+static zend_op_array* xhp_compile_file(zend_file_handle* f, int type) {
 #if PHP_VERSION_ID >= 70400
   // open_file_for_scanning will reset this value, so we need to preserve its
   // initial state and restore it later.
   zend_bool skip_shebang_tmp = CG(skip_shebang);
 #endif
 
-  if (!f || open_file_for_scanning(f TSRMLS_CC) == FAILURE) {
+  if (!f || open_file_for_scanning(f) == FAILURE) {
 #if PHP_VERSION_ID >= 70400
     CG(skip_shebang) = skip_shebang_tmp;
 #endif
     // If opening the file fails just send it to the original func
-    return dist_compile_file(f, type TSRMLS_CC);
+    return dist_compile_file(f, type);
   }
 #if PHP_VERSION_ID >= 70400
   CG(skip_shebang) = skip_shebang_tmp;
@@ -144,7 +144,7 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) 
     // Read full program from zend stream
     char read_buf[4096];
     size_t len;
-    while (len = zend_stream_read(f, (char*)&read_buf, 4095 TSRMLS_CC)) {
+    while (len = zend_stream_read(f, (char*)&read_buf, 4095)) {
       read_buf[len] = 0;
       original_code += read_buf;
     }
@@ -168,7 +168,7 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) 
     CG(in_compilation) = true;
     CG(zend_lineno) = error_lineno;
     zend_string *str = zend_string_init(f->filename, strlen(f->filename), 0);
-    zend_set_compiled_filename(str  TSRMLS_CC);
+    zend_set_compiled_filename(str );
     zend_string_release(str);
     zend_error(E_PARSE, "%s", error_str.c_str());
     zend_bailout();
@@ -204,14 +204,14 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type TSRMLS_DC) 
   fake_file.handle.stream.closer = NULL;
 
   // TODO: should check for bailout
-  zend_op_array* ret = dist_compile_file(&fake_file, type TSRMLS_CC);
+  zend_op_array* ret = dist_compile_file(&fake_file, type);
 
   zend_destroy_file_handle(&fake_file);
 
   return ret;
 }
 
-static zend_op_array* xhp_compile_string(zval* str, char *filename TSRMLS_DC) {
+static zend_op_array* xhp_compile_string(zval* str, char *filename) {
 
   // Cast to str
   zval tmp;
@@ -258,11 +258,11 @@ static zend_op_array* xhp_compile_string(zval* str, char *filename TSRMLS_DC) {
 
     // Create another tmp zval with the rewritten PHP code and pass it to the original function
     ZVAL_STRINGL(&tmp, rewrit.c_str(), rewrit.size());
-    zend_op_array* ret = dist_compile_string(&tmp, filename TSRMLS_CC);
+    zend_op_array* ret = dist_compile_string(&tmp, filename);
     zval_dtor(&tmp);
     return ret;
   } else {
-    return dist_compile_string(str, filename TSRMLS_CC);
+    return dist_compile_string(str, filename);
   }
 }
 
@@ -382,7 +382,7 @@ ZEND_FUNCTION(xhp_preprocess_code) {
   // Parse zend params
   char *code;
   int code_len;
-  if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &code, &code_len) == FAILURE) {
+  if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &code, &code_len) == FAILURE) {
     RETURN_NULL();
   }
   string rewrit, error;
@@ -442,7 +442,7 @@ PHP_FUNCTION(xhp_rename_function)
   func = zend_hash_find(EG(function_table), orig_fname);
   if (func == NULL) {
     zend_error(E_WARNING, "%s() failed: original '%s' does not exist!",
-                 get_active_function_name(TSRMLS_C),ZSTR_VAL(orig_fname));
+                 get_active_function_name(),ZSTR_VAL(orig_fname));
     RETURN_FALSE;
   }
 
@@ -450,19 +450,19 @@ PHP_FUNCTION(xhp_rename_function)
 
   if (zend_hash_exists(EG(function_table), new_fname)) {
     zend_error(E_WARNING, "%s() failed: new '%s' already exist!",
-                 get_active_function_name(TSRMLS_C),ZSTR_VAL(new_fname));
+                 get_active_function_name(),ZSTR_VAL(new_fname));
     RETURN_FALSE;
   }
 
   if (zend_hash_add(EG(function_table), new_fname, func) == NULL) {
     zend_error(E_WARNING, "%s() failed to insert '%s' into function table",
-                 get_active_function_name(TSRMLS_C), ZSTR_VAL(new_fname));
+                 get_active_function_name(), ZSTR_VAL(new_fname));
     RETURN_FALSE;
   }
 
   if(zend_hash_del(EG(function_table), orig_fname) == FAILURE) {
     zend_error(E_WARNING, "%s() failed to remove '%s' from function table",
-              get_active_function_name(TSRMLS_C),
+              get_active_function_name(),
               ZSTR_VAL(orig_fname));
 
     zend_hash_del(EG(function_table), new_fname);
