@@ -32,7 +32,11 @@ using namespace std;
 //
 // Decls
 typedef zend_op_array* (zend_compile_file_t)(zend_file_handle*, int);
+#if PHP_VERSION_ID >= 80000
+typedef zend_op_array* (zend_compile_string_t)(zend_string*, const char*);
+#else
 typedef zend_op_array* (zend_compile_string_t)(zval*, char*);
+#endif
 static zend_compile_file_t* dist_compile_file;
 static zend_compile_string_t* dist_compile_string;
 
@@ -209,9 +213,17 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type) {
   return ret;
 }
 
+#if PHP_VERSION_ID >= 80000
+static zend_op_array* xhp_compile_string(zend_string* str, const char *filename) {
+#else
 static zend_op_array* xhp_compile_string(zval* str, char *filename) {
+#endif
 
   // Cast to str
+#if PHP_VERSION_ID >= 80000
+  zend_string *rewritten_code_str;
+  char* val = ZSTR_VAL(str);
+#else
   zval tmp;
   char* val;
   if (Z_TYPE_P(str) != IS_STRING) {
@@ -222,6 +234,7 @@ static zend_op_array* xhp_compile_string(zval* str, char *filename) {
   } else {
     val = Z_STRVAL_P(str);
   }
+#endif
 
   // Process XHP
   string rewrit, error_str;
@@ -237,10 +250,12 @@ static zend_op_array* xhp_compile_string(zval* str, char *filename) {
   flags.eval = true;
   XHPResult result = xhp_preprocess(original_code, rewrit, error_str, error_lineno, flags);
 
+#if PHP_VERSION_ID < 80000
   // Destroy temporary in the case of non-string input (why?)
   if (Z_TYPE_P(str) != IS_STRING) {
     zval_dtor(&tmp);
   }
+#endif
 
   if (result == XHPErred) {
 
@@ -253,11 +268,16 @@ static zend_op_array* xhp_compile_string(zval* str, char *filename) {
     CG(in_compilation) = original_in_compilation;
     return NULL;
   } else if (result == XHPRewrote) {
-
     // Create another tmp zval with the rewritten PHP code and pass it to the original function
+#if PHP_VERSION_ID >= 80000
+    rewritten_code_str = zend_string_init(rewrit.c_str(), rewrit.size(), 0);
+    zend_op_array* ret = dist_compile_string(rewritten_code_str, filename);
+    zend_string_release(rewritten_code_str);
+#else
     ZVAL_STRINGL(&tmp, rewrit.c_str(), rewrit.size());
     zend_op_array* ret = dist_compile_string(&tmp, filename);
     zval_dtor(&tmp);
+#endif
     return ret;
   } else {
     return dist_compile_string(str, filename);
