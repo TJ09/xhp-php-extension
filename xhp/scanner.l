@@ -238,6 +238,7 @@ DNUM ({LNUM}?"."{LNUM})|({LNUM}"."{LNUM}?)
 EXPONENT_DNUM (({LNUM}|{DNUM})[eE][+-]?{LNUM})
 HNUM "0x"[0-9a-fA-F]+(_[0-9a-fA-F]+)*
 BNUM "0b"[01]+(_[01]+)*
+ONUM "0o"[0-7]+(_[0-7]+)*
 LABEL_START [a-zA-Z_\x7f-\xff]
 LABEL {LABEL_START}[a-zA-Z0-9_\x7f-\xff]*
 ANY_CHAR (.|[\n])
@@ -415,6 +416,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   enddeclare tok(T_ENDDECLARE);
   as tok(T_AS);
   switch tok(T_SWITCH);
+  match tok(T_MATCH);
   endswitch tok(T_ENDSWITCH);
   case tok(T_CASE);
   default tok(T_DEFAULT);
@@ -458,6 +460,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   trait tok(T_TRAIT);
   insteadof tok(T_INSTEADOF);
   "yield from" tok(T_YIELD_FROM);
+  "#[" tok(T_ATTRIBUTE);
   yield tok(T_YIELD);
   "..." tok(T_ELLIPSIS);
   __namespace__ tok(T_NS_C);
@@ -516,10 +519,10 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   ">>" tok(T_SR);
   "++" tok(T_INC);
   "--" tok(T_DEC);
+  "?->" tok(T_NULLSAFE_OBJECT_OPERATOR);
   "->" tok(T_OBJECT_OPERATOR);
   "=>" tok(T_DOUBLE_ARROW);
   "::" tok(T_PAAMAYIM_NEKUDOTAYIM);
-  "\\" tok(T_NS_SEPARATOR);
   "??" tok(T_COALESCE);
   ":"{XHPLABEL} {
     int ntt = getNextTokenType(last_token());
@@ -554,8 +557,30 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 
  /* Numbers */
 <ST_PHP,ST_PHP_NO_RESERVED_WORDS,ST_XHP_ATTR_TYPE_DECL,ST_XHP_IN_TAG>{
-  {LNUM}|{HNUM} tok(T_LNUMBER);
+  {LNUM}|{HNUM}|{BNUM}|{ONUM} tok(T_LNUMBER);
   {DNUM}|{EXPONENT_DNUM} tok(T_DNUMBER);
+}
+
+<ST_PHP,ST_PHP_NO_RESERVED_WORDS,ST_XHP_ATTR_TYPE_DECL,ST_XHP_CHILDREN_DECL>{
+  "namespace"("\\"{LABEL})+ {
+    tok(T_NAME_RELATIVE);
+  }
+}
+
+<ST_PHP,ST_PHP_NO_RESERVED_WORDS,ST_XHP_ATTR_TYPE_DECL,ST_XHP_CHILDREN_DECL>{
+  {LABEL}("\\"{LABEL})+ {
+    tok(T_NAME_QUALIFIED);
+  }
+}
+
+<ST_PHP,ST_PHP_NO_RESERVED_WORDS,ST_XHP_ATTR_TYPE_DECL,ST_XHP_CHILDREN_DECL>{
+  "\\"{LABEL}("\\"{LABEL})* {
+    tok(T_NAME_FULLY_QUALIFIED);
+  }
+}
+
+<ST_PHP,ST_PHP_NO_RESERVED_WORDS,ST_XHP_ATTR_TYPE_DECL,ST_XHP_CHILDREN_DECL>{
+  "\\" tok(T_NS_SEPARATOR);
 }
 
  /* Scalars (parsing these doesn't really matter since we just pass them through literally) */

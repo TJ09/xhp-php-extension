@@ -63,6 +63,7 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %lex-param { void* yyscanner }
 %define parse.error verbose
 
+%precedence T_THROW
 %precedence T_INCLUDE T_INCLUDE_ONCE T_REQUIRE T_REQUIRE_ONCE
 %left ','
 %left T_LOGICAL_OR
@@ -90,179 +91,189 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %precedence T_INSTANCEOF
 %precedence '~' T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST '@'
 %right T_POW
-%precedence T_NEW T_CLONE
+%precedence T_CLONE
 
 /* Resolve danging else conflict */
 %precedence T_NOELSE
 %precedence T_ELSEIF
 %precedence T_ELSE
 
-%token T_EXIT 321
-%token T_IF 322
-
 %token T_LNUMBER 309
 %token T_DNUMBER 310
 %token T_STRING 311
-%token T_STRING_VARNAME 316
-%token T_VARIABLE 312
-%token T_NUM_STRING 317
-%token T_INLINE_HTML 313
-%token T_ENCAPSED_AND_WHITESPACE 314
-%token T_CONSTANT_ENCAPSED_STRING 315
+%token T_NAME_FULLY_QUALIFIED 312
+%token T_NAME_RELATIVE 313
+%token T_NAME_QUALIFIED 314
+%token T_VARIABLE 315
+%token T_INLINE_HTML 316
+%token T_ENCAPSED_AND_WHITESPACE 317
+%token T_CONSTANT_ENCAPSED_STRING 318
+%token T_STRING_VARNAME 319
+%token T_NUM_STRING 320
 
-%token T_BACKTICKS_EXPR /* new in XHP; replaces '`' backticks_expr '`' */
-%token T_ECHO 324
-%token T_DO 325
-%token T_WHILE 326
-%token T_ENDWHILE 327
-%token T_FOR 328
-%token T_ENDFOR 329
-%token T_FOREACH 330
-%token T_ENDFOREACH 331
-%token T_DECLARE 332
-%token T_ENDDECLARE 333
-%token T_AS 334
-%token T_SWITCH 335
-%token T_ENDSWITCH 336
-%token T_CASE 337
-%token T_DEFAULT 338
-%token T_BREAK 339
-%token T_FN 343
-%token T_CONTINUE 340
-%token T_GOTO 341
-%token T_FUNCTION 342
-%token T_CONST 344
-%token T_RETURN 345
-%token T_TRY 346
-%token T_CATCH 347
-%token T_FINALLY 348
-%token T_THROW 349
-%token T_USE 350
-%token T_GLOBAL 352
-%token T_VAR 359
-%token T_UNSET 360
-%token T_ISSET 361
-%token T_EMPTY 362
-%token T_HALT_COMPILER 363
-%token T_CLASS 364
-%token T_INTERFACE 366
-%token T_EXTENDS 367
-%token T_IMPLEMENTS 368
-%token T_OBJECT_OPERATOR 369
-%token T_DOUBLE_ARROW 268
-%token T_LIST 370
-%token T_ARRAY 371
-%token T_CALLABLE 372
-%token T_CLASS_C 376
-%token T_METHOD_C 378
-%token T_FUNC_C 379
-%token T_TRAIT_C 377
-%token T_LINE 373
-%token T_FILE 374
-%token T_COMMENT 380
-%token T_DOC_COMMENT 381
-%token T_OPEN_TAG 382
-%token T_OPEN_TAG_WITH_ECHO 383
-%token T_OPEN_TAG_FAKE
-%token T_CLOSE_TAG 384
-%token T_WHITESPACE 385
-%token T_HEREDOC
-%token T_CURLY_OPEN 389
-%token T_DOLLAR_OPEN_CURLY_BRACES 388
-%token T_PAAMAYIM_NEKUDOTAYIM 390
-%token T_NAMESPACE 391
-%token T_NS_C 392
-%token T_DIR 375
-%token T_NS_SEPARATOR 393
-%token T_ELLIPSIS 394
-%token T_TRAIT 365
-%token T_INSTEADOF 351
-%token T_YIELD 267
-%token T_COALESCE_EQUAL 282
-%token T_COALESCE 283
-
-%token T_XHP_WHITESPACE
-%token T_XHP_TEXT
-%token T_XHP_ATTRIBUTE
-%token T_XHP_CATEGORY
-%token T_XHP_CATEGORY_LABEL
-%token T_XHP_CHILDREN
-%token T_XHP_ANY
-%token T_XHP_PCDATA
-%token T_XHP_COLON
-%token T_XHP_HYPHEN
-%token T_XHP_BOOLEAN
-%token T_XHP_NUMBER
-%token T_XHP_MIXED
-%token T_XHP_STRING
-%token T_XHP_ENUM
-%token T_XHP_FLOAT
-%token T_XHP_CALLABLE
-%token T_XHP_REQUIRED
-%token T_XHP_LABEL
-
-%token T_XHP_TAG_LT
-%token T_XHP_TAG_GT
-%token T_TYPELIST_LT
-%token T_TYPELIST_GT
-%token T_UNRESOLVED_OP
-%token T_UNRESOLVED_LT
-
-%token T_PUBLIC 358
-%token T_PROTECTED 357
-%token T_PRIVATE 356
-%token T_FINAL 355
-%token T_ABSTRACT 354
-%token T_STATIC 353
-%token T_ENDIF 323
-%token T_ELSE 308
-%token T_ELSEIF 307
+%token T_INCLUDE 260
+%token T_INCLUDE_ONCE 261
+%token T_EVAL 321
+%token T_REQUIRE 262
+%token T_REQUIRE_ONCE 263
+%token T_LOGICAL_OR 264
+%token T_LOGICAL_XOR 265
+%token T_LOGICAL_AND 266
+%token T_PRINT 267
+%token T_YIELD 268
+%token T_YIELD_FROM 270
+%token T_INSTANCEOF 296
+%token T_NEW 322
 %token T_CLONE 305
-%token T_NEW 304
-%token T_POW 303
-%token T_UNSET_CAST 302
-%token T_BOOL_CAST 301
-%token T_OBJECT_CAST 300
-%token T_ARRAY_CAST 299
-%token T_STRING_CAST 298
-%token T_DOUBLE_CAST 297
-%token T_INT_CAST 296
-%token T_DEC 320
-%token T_INC 319
-%token T_INSTANCEOF 295
-%token T_SR 294
-%token T_SL 293
-%token T_IS_GREATER_OR_EQUAL 292
-%token T_IS_SMALLER_OR_EQUAL 291
-%token T_SPACESHIP 290
-%token T_IS_NOT_IDENTICAL 289
-%token T_IS_IDENTICAL 288
-%token T_IS_NOT_EQUAL 287
-%token T_IS_EQUAL 286
-%token T_BOOLEAN_AND 285
-%token T_BOOLEAN_OR 284
-%token T_POW_EQUAL 281
-%token T_SR_EQUAL 280
-%token T_SL_EQUAL 279
-%token T_XOR_EQUAL 278
-%token T_OR_EQUAL 277
-%token T_AND_EQUAL 276
-%token T_MOD_EQUAL 275
-%token T_CONCAT_EQUAL 274
-%token T_DIV_EQUAL 273
-%token T_MUL_EQUAL 272
-%token T_MINUS_EQUAL 271
-%token T_PLUS_EQUAL 270
-%token T_YIELD_FROM 269
-%token T_PRINT 266
-%token T_LOGICAL_AND 265
-%token T_LOGICAL_XOR 264
-%token T_LOGICAL_OR 263
-%token T_REQUIRE_ONCE 262
-%token T_REQUIRE 261
-%token T_EVAL 318
-%token T_INCLUDE_ONCE 260
-%token T_INCLUDE 259
+%token T_EXIT 323
+%token T_IF 324
+%token T_ELSEIF 307
+%token T_ELSE 308
+%token T_ENDIF 325
+%token T_ECHO 326
+%token T_DO 327
+%token T_WHILE 328
+%token T_ENDWHILE 329
+%token T_FOR 330
+%token T_ENDFOR 331
+%token T_FOREACH 332
+%token T_ENDFOREACH 333
+%token T_DECLARE 334
+%token T_ENDDECLARE 335
+%token T_AS 336
+%token T_SWITCH 337
+%token T_ENDSWITCH 338
+%token T_CASE 339
+%token T_DEFAULT 340
+%token T_MATCH 341
+%token T_BREAK 342
+%token T_CONTINUE 343
+%token T_GOTO 344
+%token T_FUNCTION 345
+%token T_FN 346
+%token T_CONST 347
+%token T_RETURN 348
+%token T_TRY 349
+%token T_CATCH 350
+%token T_FINALLY 351
+%token T_THROW 258
+%token T_USE 352
+%token T_INSTEADOF 353
+%token T_GLOBAL 354
+%token T_STATIC 355
+%token T_ABSTRACT 356
+%token T_FINAL 357
+%token T_PRIVATE 358
+%token T_PROTECTED 359
+%token T_PUBLIC 360
+%token T_VAR 361
+%token T_UNSET 362
+%token T_ISSET 363
+%token T_EMPTY 364
+%token T_HALT_COMPILER 365
+%token T_CLASS 366
+%token T_TRAIT 367
+%token T_INTERFACE 368
+%token T_EXTENDS 369
+%token T_IMPLEMENTS 370
+%token T_NAMESPACE 371
+%token T_LIST 372
+%token T_ARRAY 373
+%token T_CALLABLE 374
+%token T_LINE 375
+%token T_FILE 376
+%token T_DIR 377
+%token T_CLASS_C 378
+%token T_TRAIT_C 379
+%token T_METHOD_C 380
+%token T_FUNC_C 381
+%token T_NS_C 382
+
+%token T_ATTRIBUTE 383
+%token T_PLUS_EQUAL 271
+%token T_MINUS_EQUAL 272
+%token T_MUL_EQUAL 273
+%token T_DIV_EQUAL 274
+%token T_CONCAT_EQUAL 275
+%token T_MOD_EQUAL 276
+%token T_AND_EQUAL 277
+%token T_OR_EQUAL 278
+%token T_XOR_EQUAL 279
+%token T_SL_EQUAL 280
+%token T_SR_EQUAL 281
+%token T_COALESCE_EQUAL 283
+%token T_BOOLEAN_OR 285
+%token T_BOOLEAN_AND 286
+%token T_IS_EQUAL 287
+%token T_IS_NOT_EQUAL 288
+%token T_IS_IDENTICAL 289
+%token T_IS_NOT_IDENTICAL 290
+%token T_IS_SMALLER_OR_EQUAL 292
+%token T_IS_GREATER_OR_EQUAL 293
+%token T_SPACESHIP 291
+%token T_SL 294
+%token T_SR 295
+%token T_INC 384
+%token T_DEC 385
+%token T_INT_CAST 297
+%token T_DOUBLE_CAST 298
+%token T_STRING_CAST 299
+%token T_ARRAY_CAST 300
+%token T_OBJECT_CAST 301
+%token T_BOOL_CAST 302
+%token T_UNSET_CAST 303
+%token T_OBJECT_OPERATOR 386
+%token T_NULLSAFE_OBJECT_OPERATOR 387
+%token T_DOUBLE_ARROW 269
+%token T_COMMENT 388
+%token T_DOC_COMMENT 389
+%token T_OPEN_TAG 390
+%token T_OPEN_TAG_WITH_ECHO 391
+%token T_CLOSE_TAG 392
+%token T_WHITESPACE 393
+%token T_START_HEREDOC 394
+%token T_END_HEREDOC 395
+%token T_DOLLAR_OPEN_CURLY_BRACES 396
+%token T_CURLY_OPEN 397
+%token T_PAAMAYIM_NEKUDOTAYIM 398
+%token T_NS_SEPARATOR 399
+%token T_ELLIPSIS 400
+%token T_COALESCE 284
+%token T_POW 304
+%token T_POW_EQUAL 282
+%token T_BAD_CHARACTER 401
+
+// XHP-specific tokens
+%token T_HEREDOC 5000
+%token T_BACKTICKS_EXPR 5001
+%token T_XHP_WHITESPACE 5002
+%token T_XHP_TEXT 5003
+%token T_XHP_ATTRIBUTE 5004
+%token T_XHP_CATEGORY 5005
+%token T_XHP_CATEGORY_LABEL 5006
+%token T_XHP_CHILDREN 5007
+%token T_XHP_ANY 5008
+%token T_XHP_PCDATA 5009
+%token T_XHP_COLON 5010
+%token T_XHP_HYPHEN 5011
+%token T_XHP_BOOLEAN 5012
+%token T_XHP_NUMBER 5013
+%token T_XHP_MIXED 5014
+%token T_XHP_STRING 5015
+%token T_XHP_ENUM 5016
+%token T_XHP_FLOAT 5017
+%token T_XHP_CALLABLE 5018
+%token T_XHP_REQUIRED 5019
+%token T_XHP_LABEL 5020
+
+%token T_XHP_TAG_LT 5021
+%token T_XHP_TAG_GT 5022
+%token T_TYPELIST_LT 5023
+%token T_TYPELIST_GT 5024
+%token T_UNRESOLVED_OP 5025
+%token T_UNRESOLVED_LT 5026
+%token T_OPEN_TAG_FAKE 5027
+
 %%
 
 start:
@@ -278,7 +289,7 @@ reserved_non_modifiers:
 | T_THROW | T_USE | T_INSTEADOF | T_GLOBAL | T_VAR | T_UNSET | T_ISSET | T_EMPTY | T_CONTINUE | T_GOTO
 | T_FUNCTION | T_CONST | T_RETURN | T_PRINT | T_YIELD | T_LIST | T_SWITCH | T_ENDSWITCH | T_CASE | T_DEFAULT | T_BREAK
 | T_ARRAY | T_CALLABLE | T_EXTENDS | T_IMPLEMENTS | T_NAMESPACE | T_TRAIT | T_INTERFACE | T_CLASS
-| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C | T_FN
+| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C | T_FN | T_MATCH
 ;
 
 semi_reserved:
@@ -294,41 +305,76 @@ top_statement_list:
   top_statement_list top_statement {
     $$ = $1 + $2;
   }
-| /* empty */ {
+| %empty {
     $$ = "";
   }
 ;
 
-namespace_name:
-  T_STRING
-| namespace_name T_NS_SEPARATOR T_STRING {
-    $$ = $1 + $2 + $3;
-  }
+namespace_declaration_name:
+  identifier
+| T_NAME_QUALIFIED
 ;
 
-name:
+namespace_name:
+  T_STRING
+| T_NAME_QUALIFIED;
+
+legacy_namespace_name:
   namespace_name
-| T_NAMESPACE T_NS_SEPARATOR namespace_name {
-    $$ = $1 + $2 + $3;
-  }
-| T_NS_SEPARATOR namespace_name {
+| T_NAME_FULLY_QUALIFIED;
+
+name:
+  T_STRING
+| T_NAME_QUALIFIED
+| T_NAME_FULLY_QUALIFIED
+| T_NAME_RELATIVE
+;
+
+attribute_decl:
+  class_name
+| class_name argument_list {
     $$ = $1 + $2;
   }
 ;
 
-top_statement:
-  statement
-| function_declaration_statement
+attribute_group:
+  attribute_decl
+| attribute_group ',' attribute_decl {
+    $1 + $2 + $3;
+  }
+;
+
+attribute:
+  T_ATTRIBUTE attribute_group possible_comma ']' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+;
+
+attributes:
+  attribute
+| attributes attribute {
+    $$ = $1 + $2;
+  }
+;
+
+attributed_statement:
+  function_declaration_statement
 | class_declaration_statement
 | trait_declaration_statement
 | interface_declaration_statement
+;
+
+top_statement:
+  statement
+| attributed_statement
+| attributes attributed_statement
 | T_HALT_COMPILER '(' ')' ';' {
     $$ = $1 + $2 + $3 + $4;
   }
-| T_NAMESPACE namespace_name ';' {
+| T_NAMESPACE namespace_declaration_name ';' {
     $$ = $1 + " " + $2 + $3;
   }
-| T_NAMESPACE namespace_name '{' top_statement_list '}' {
+| T_NAMESPACE namespace_declaration_name '{' top_statement_list '}' {
     $$ = $1 + " " + $2 + $3 + $4 + $5;
   }
 | T_NAMESPACE '{' top_statement_list '}' {
@@ -357,25 +403,19 @@ use_type:
 ;
 
 group_use_declaration:
-  namespace_name T_NS_SEPARATOR '{' unprefixed_use_declarations possible_comma '}' {
+  legacy_namespace_name T_NS_SEPARATOR '{' unprefixed_use_declarations possible_comma '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6;
-  }
-| T_NS_SEPARATOR namespace_name T_NS_SEPARATOR '{' unprefixed_use_declarations possible_comma '}' {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
   }
 ;
 
 mixed_group_use_declaration:
-  namespace_name T_NS_SEPARATOR '{' inline_use_declarations possible_comma '}' {
+  legacy_namespace_name T_NS_SEPARATOR '{' inline_use_declarations possible_comma '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6;
-  }
-| T_NS_SEPARATOR namespace_name T_NS_SEPARATOR '{' inline_use_declarations possible_comma '}' {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
   }
 ;
 
 possible_comma:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | ','
@@ -417,9 +457,9 @@ unprefixed_use_declaration:
 ;
 
 use_declaration:
-  unprefixed_use_declaration
-| T_NS_SEPARATOR unprefixed_use_declaration {
-    $$ = $1 + $2;
+  legacy_namespace_name
+| legacy_namespace_name T_AS T_STRING {
+    $$ = $1 + " " + $2 + " " + $3;
   }
 ;
 
@@ -434,17 +474,15 @@ inner_statement_list:
   inner_statement_list inner_statement {
     $$ = $1 + $2;
   }
-| /* empty */ {
+| %empty {
     $$ = "";
   }
 ;
 
 inner_statement:
   statement
-| function_declaration_statement
-| class_declaration_statement
-| trait_declaration_statement
-| interface_declaration_statement
+| attributed_statement
+| attributes attributed_statement
 | T_HALT_COMPILER '(' ')' ';' {
     $$ = $1 + $2 + $3 + $4;
   }
@@ -520,32 +558,36 @@ unticked_statement:
 | T_TRY '{' inner_statement_list '}' catch_list finally_statement {
     $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
-| T_THROW expr ';' {
-    $$ = $1 + " " + $2 + $3;
-  }
 | T_GOTO T_STRING ';' {
     $$ = $1 + " " + $2 + $3;
   }
 ;
 
 catch_list:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
-| catch_list T_CATCH '(' catch_name_list T_VARIABLE ')' '{' inner_statement_list '}' {
-  $$ = $1 + $2 + $3 + " " + $4 + $5 + $6 + $7 + $8 + $9;
+| catch_list T_CATCH '(' catch_name_list optional_variable ')' '{' inner_statement_list '}' {
+  $$ = $1 + $2 + $3 + $4 + " " + $5 + $6 + $7 + $8 + $9;
   }
 ;
 
 catch_name_list:
-  name
-| catch_name_list '|' name {
+  class_name
+| catch_name_list '|' class_name {
     $$ = $1 + $2 + $3;
   }
 ;
 
+optional_variable:
+  %empty {
+    $$ = "";
+  }
+| T_VARIABLE
+;
+
 finally_statement:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | T_FINALLY '{' inner_statement_list '}' {
@@ -571,14 +613,14 @@ function_declaration_statement:
 ;
 
 is_reference:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | '&'
 ;
 
 is_variadic:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | T_ELLIPSIS
@@ -618,30 +660,30 @@ interface_declaration_statement:
 ;
 
 extends_from:
-  /* empty */ {
+  %empty {
     yyextra->has_parent = false;
     $$ = "";
   }
-| T_EXTENDS name {
+| T_EXTENDS class_name {
     yyextra->has_parent = true;
     $$ = " " + $1 + " " + $2;
   }
 ;
 
 interface_extends_list:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
-| T_EXTENDS name_list {
+| T_EXTENDS class_name_list {
     $$ = $1 + " " + $2;
   }
 ;
 
 implements_list:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
-| T_IMPLEMENTS name_list {
+| T_IMPLEMENTS class_name_list {
     $$ = " " + $1 + " " + $2;
   }
 ;
@@ -696,7 +738,7 @@ switch_case_list:
 ;
 
 case_list:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | case_list T_CASE expr case_separator inner_statement_list {
@@ -710,6 +752,44 @@ case_list:
 case_separator:
   ':'
 | ';'
+;
+
+match:
+  T_MATCH '(' expr ')' '{' match_arm_list '}' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
+  }
+;
+
+match_arm_list:
+  %empty {
+    $$ = "";
+  }
+| non_empty_match_arm_list possible_comma {
+    $$ = $1 + $2;
+  }
+;
+
+non_empty_match_arm_list:
+  match_arm
+| non_empty_match_arm_list ',' match_arm {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+match_arm:
+  match_arm_cond_list possible_comma T_DOUBLE_ARROW expr {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| T_DEFAULT possible_comma T_DOUBLE_ARROW expr {
+    $$ = $1 + $2 + $3 + $4;
+  }
+;
+
+match_arm_cond_list:
+  expr
+| match_arm_cond_list ',' expr {
+    $$ = $1 + $2 + $3;
+  }
 ;
 
 while_statement:
@@ -754,33 +834,53 @@ alt_if_stmt:
 ;
 
 parameter_list:
-  non_empty_parameter_list
-| /* empty */ {
+  non_empty_parameter_list possible_comma {
+    $$ = $1 + $2;
+  }
+| %empty {
     $$ = "";
   }
 ;
 
 non_empty_parameter_list:
-  parameter
-  | non_empty_parameter_list ',' parameter {
+  attributed_parameter
+  | non_empty_parameter_list ',' attributed_parameter {
     $$ = $1 + $2 + $3;
   }
 ;
 
-parameter:
-  optional_type is_reference is_variadic T_VARIABLE {
-    $$ = $1 + $2 + $3 + $4;
+attributed_parameter:
+  attributes parameter {
+    $$ = $1 + $2;
   }
-| optional_type is_reference is_variadic T_VARIABLE '=' expr {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6;
+| parameter
+;
+
+optional_visibility_modifier:
+  %empty {
+    $$ = "";
+  }
+| T_PUBLIC
+| T_PROTECTED
+| T_PRIVATE
+;
+
+parameter:
+  optional_visibility_modifier optional_type_without_static
+  is_reference is_variadic T_VARIABLE {
+    $$ = $1 + $2 + $3 + $4 + $5;
+  }
+| optional_visibility_modifier optional_type_without_static
+  is_reference is_variadic T_VARIABLE '=' expr {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
   }
 ;
 
-optional_type:
-  /* empty */ {
+optional_type_without_static:
+  %empty {
     $$ = "";
   }
-| type_expr
+| type_expr_without_static
 ;
 
 type_expr:
@@ -788,16 +888,48 @@ type_expr:
 | '?' type {
     $$ = $1 + $2;
   }
+| union_type
 ;
 
 type:
+  type_without_static
+| T_STATIC
+;
+
+union_type:
+  type '|' type {
+    $$ = $1 + $2 + $3;
+  }
+| union_type '|' type  {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+type_expr_without_static:
+  type_without_static
+| '?' type_without_static {
+    $$ = $1 + $2;
+  }
+| union_type_without_static
+;
+
+type_without_static:
   T_ARRAY
 | T_CALLABLE
 | name
 ;
 
+union_type_without_static:
+  type_without_static '|' type_without_static {
+    $$ = $1 + $2 + $3;
+  }
+| union_type_without_static '|' type_without_static {
+    $$ = $1 + $2 + $3;
+  }
+;
+
 return_type:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | ':' type_expr {
@@ -823,6 +955,9 @@ non_empty_argument_list:
 
 argument:
   expr
+| identifier ':' expr {
+    $$ = $1 + $2 + $3;
+  }
 | T_ELLIPSIS expr {
     $$ = $1 + $2;
   }
@@ -857,20 +992,17 @@ class_statement_list:
   class_statement_list class_statement {
     $$ = $1 + $2;
   }
-| /* empty */ {
+| %empty {
     $$ = "";
   }
 ;
 
-class_statement:
-  variable_modifiers optional_type property_list ';' {
+attributed_class_statement:
+  variable_modifiers optional_type_without_static property_list ';' {
     $$ = $1 + " " + $2 + $3 + $4;
   }
 | method_modifiers T_CONST class_const_list ';' {
     $$ = $1 + $2 + " " + $3 + $4;
-  }
-| T_USE name_list trait_adaptations {
-    $$ = $1 + " " + $2 + $3;
   }
 | method_modifiers function {
     yyextra->old_expecting_xhp_class_statements = yyextra->expecting_xhp_class_statements;
@@ -881,9 +1013,19 @@ class_statement:
   }
 ;
 
-name_list:
-  name
-| name_list ',' name {
+class_statement:
+  attributed_class_statement
+| attributes attributed_class_statement {
+    $$ = $1 + $2;
+  }
+| T_USE class_name_list trait_adaptations {
+    $$ = $1 + " " + $2 + $3;
+  }
+;
+
+class_name_list:
+  class_name
+| class_name_list ',' class_name {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -915,7 +1057,7 @@ trait_adaptation:
 ;
 
 trait_precedence:
-  absolute_trait_method_reference T_INSTEADOF name_list {
+  absolute_trait_method_reference T_INSTEADOF class_name_list {
     $$ = $1 + " " + $2 + " " + $3;
   }
 ;
@@ -941,7 +1083,7 @@ trait_method_reference:
 ;
 
 absolute_trait_method_reference:
-  name T_PAAMAYIM_NEKUDOTAYIM identifier {
+  class_name T_PAAMAYIM_NEKUDOTAYIM identifier {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -961,7 +1103,7 @@ variable_modifiers:
 ;
 
 method_modifiers:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | non_empty_member_modifiers {
@@ -1030,7 +1172,7 @@ echo_expr:
 ;
 
 for_expr:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | non_empty_for_expr
@@ -1056,6 +1198,9 @@ new_expr:
   }
 | T_NEW anonymous_class {
     $$ = $1 + " " + $2;
+  }
+| T_NEW attributes anonymous_class {
+    $$ = $1 + " " + $2 + $3;
   }
 ;
 
@@ -1278,19 +1423,31 @@ expr:
 | T_YIELD_FROM expr {
     $$ = $1 + $2;
   }
+| T_THROW expr {
+    $$ = $1 + " " + $2;
+  }
 | inline_function {
     $$ = $1;
+  }
+| attributes inline_function {
+    $$ = $1 + $2;
   }
 | T_STATIC inline_function {
     $$ = $1 + $2;
   }
+| attributes T_STATIC inline_function {
+    $$ = $1 + $2 + $3;
+  }
+| match
 ;
 
 inline_function:
-  function returns_ref '(' parameter_list ')' lexical_vars return_type '{' inner_statement_list '}' {
+  function returns_ref '(' parameter_list ')' lexical_vars return_type
+  '{' inner_statement_list '}' {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10;
   }
-| fn returns_ref '(' parameter_list ')' return_type T_DOUBLE_ARROW expr {
+| fn returns_ref '(' parameter_list ')' return_type
+  T_DOUBLE_ARROW expr {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + $8;
   }
 ;
@@ -1304,18 +1461,18 @@ function:
 ;
 
 returns_ref:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | '&'
 ;
 
 lexical_vars:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
-| T_USE '(' lexical_var_list ')' {
-    $$ = $1 + $2 + $3 + $4;
+| T_USE '(' lexical_var_list possible_comma ')' {
+    $$ = $1 + $2 + $3 + $4 + $5;
   }
 ;
 
@@ -1327,7 +1484,7 @@ lexical_var_list:
 ;
 
 lexical_var:
-| T_VARIABLE
+  T_VARIABLE
 | '&' T_VARIABLE {
     $$ = $1 + $2;
   }
@@ -1356,10 +1513,13 @@ class_name:
 class_name_reference:
   class_name
 | new_variable
+| '(' expr ')' {
+    $$ = $1 + $2 + $3;
+  }
 ;
 
 exit_expr:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | '(' optional_expr')' {
@@ -1368,13 +1528,13 @@ exit_expr:
 ;
 
 ctor_arguments:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | argument_list
 ;
 
-dereferencable_scalar:
+dereferenceable_scalar:
   T_ARRAY '(' array_pair_list ')' {
     $$ = $1 + $2 + $3 + $4;
   }
@@ -1382,11 +1542,22 @@ dereferencable_scalar:
     $$ = $1 + $2 + $3;
   }
 | T_CONSTANT_ENCAPSED_STRING
+| '"' encaps_list '"' {
+    $$ = $1 + $2 + $3;
+  }
 ;
 
 scalar:
   T_LNUMBER
 | T_DNUMBER
+| T_HEREDOC
+| dereferenceable_scalar
+| constant
+| class_constant
+;
+
+constant:
+  name
 | T_LINE
 | T_FILE
 | T_DIR
@@ -1395,17 +1566,10 @@ scalar:
 | T_FUNC_C
 | T_NS_C
 | T_CLASS_C
-| T_HEREDOC
-| '"' encaps_list '"' {
-    $$ = $1 + $2 + $3;
-  }
-| dereferencable_scalar
-| constant
 ;
 
-constant:
-  name
-| class_name T_PAAMAYIM_NEKUDOTAYIM identifier {
+class_constant:
+  class_name T_PAAMAYIM_NEKUDOTAYIM identifier {
     $$ = $1 + $2 + $3;
   }
 | variable_class_name T_PAAMAYIM_NEKUDOTAYIM identifier {
@@ -1414,22 +1578,28 @@ constant:
 ;
 
 optional_expr:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | expr
 ;
 
 variable_class_name:
-  dereferencable
+  fully_dereferenceable
 ;
 
-dereferencable:
+fully_dereferenceable:
   variable
 | '(' expr ')' {
     $$ = $1 + $2 + $3;
   }
-| dereferencable_scalar
+| dereferenceable_scalar
+| class_constant
+;
+
+array_object_dereferenceable:
+  fully_dereferenceable
+| constant
 ;
 
 callable_expr:
@@ -1437,21 +1607,21 @@ callable_expr:
 | '(' expr ')' {
     $$ = $1 + $2 + $3;
   }
-| dereferencable_scalar
+| dereferenceable_scalar
 ;
 
 callable_variable:
   simple_variable
-| dereferencable '[' optional_expr ']' {
+| array_object_dereferenceable '[' optional_expr ']' {
     $$ = $1 + $2 + $3 + $4;
   }
-| constant '[' optional_expr ']' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| dereferencable '{' expr '}' {
+| array_object_dereferenceable '{' expr '}' {
     $$ = $1 + $2 + $3;
   }
-| dereferencable T_OBJECT_OPERATOR property_name argument_list {
+| array_object_dereferenceable T_OBJECT_OPERATOR property_name argument_list {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| array_object_dereferenceable T_NULLSAFE_OBJECT_OPERATOR property_name argument_list {
     $$ = $1 + $2 + $3 + $4;
   }
 | function_call
@@ -1460,7 +1630,10 @@ callable_variable:
 variable:
   callable_variable
 | static_member
-| dereferencable T_OBJECT_OPERATOR property_name {
+| array_object_dereferenceable T_OBJECT_OPERATOR property_name {
+    $$ = $1 + $2 + $3;
+  }
+| array_object_dereferenceable T_NULLSAFE_OBJECT_OPERATOR property_name {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -1495,6 +1668,9 @@ new_variable:
 | new_variable T_OBJECT_OPERATOR property_name {
     $$ = $1 + $2 + $3;
   }
+| new_variable T_NULLSAFE_OBJECT_OPERATOR property_name {
+    $$ = $1 + $2 + $3;
+  }
 | class_name T_PAAMAYIM_NEKUDOTAYIM simple_variable
 | new_variable T_PAAMAYIM_NEKUDOTAYIM simple_variable
 ;
@@ -1521,7 +1697,7 @@ array_pair_list:
 ;
 
 possible_array_pair:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | array_pair
@@ -1557,6 +1733,8 @@ array_pair:
 ;
 
 encaps_list:
+  // Intentional deviation from PHP: strings aren't parsed since XHP doesn't
+  // care about their contents, so we just allow all T_ENCAPSED_AND_WHITESPACE.
   T_ENCAPSED_AND_WHITESPACE {
     $$ = $1;
   }
@@ -1579,6 +1757,9 @@ encaps_var:
     $$ = $1 + $2 + $3 + $4;
   }
 | T_VARIABLE T_OBJECT_OPERATOR T_STRING {
+    $$ = $1 + $2 + $3;
+  }
+| T_VARIABLE T_NULLSAFE_OBJECT_OPERATOR T_STRING {
     $$ = $1 + $2 + $3;
   }
 | T_DOLLAR_OPEN_CURLY_BRACES expr '}' {
@@ -1819,7 +2000,7 @@ xhp_literal_text:
 ;
 
 xhp_children:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | xhp_literal_text {
@@ -1846,7 +2027,7 @@ xhp_child:
 
 // Attributes
 xhp_attributes:
-  /* empty */ {
+  %empty {
     $$ = "";
   }
 | xhp_attributes xhp_attribute {
@@ -1984,7 +2165,7 @@ xhp_attribute_array_type:
 | T_TYPELIST_LT xhp_attribute_array_value_type T_TYPELIST_GT {
     $$ = "array(null," + $2 + ")";
   }
-| /* empty */ {
+| %empty {
     $$ = "null";
   }
 ;
@@ -2053,7 +2234,7 @@ xhp_attribute_default:
     $2.strip_lines();
     $$ = $2;
   }
-| /* empty */ {
+| %empty {
     $$ = "null";
   }
 ;
@@ -2062,7 +2243,7 @@ xhp_attribute_is_required:
   T_XHP_REQUIRED {
     $$ = "1";
   }
-| /* empty */ {
+| %empty {
     $$ = "0";
   }
 ;
