@@ -333,23 +333,8 @@ static PHP_MINIT_FUNCTION(xhp) {
 
   REGISTER_INI_ENTRIES();
 
-#ifndef ZEND_ENGINE_3
-  // APC has this crazy magic api you can use to avoid the race condition for when an extension overwrites
-  // the compile_file function. The desired order here is APC -> XHP -> PHP, that way APC can cache the
-  // file as usual.
-  zend_module_entry *apc_lookup;
-  zend_constant *apc_magic;
-  if (zend_hash_str_find(&module_registry, "apc", sizeof("apc")-1 /* (void**)&apc_lookup*/) != NULL &&
-      zend_hash_str_find(EG(zend_constants), "\000apc_magic", 10 /* (void**)&apc_magic */) != NULL) {
-    zend_compile_file_t* (*apc_set_compile_file)(zend_compile_file_t*) = (zend_compile_file_t* (*)(zend_compile_file_t*))apc_magic->value.value.lval;
-    dist_compile_file = apc_set_compile_file(NULL);
-    apc_set_compile_file(xhp_compile_file);
-  } else
-#endif
-  {
-    dist_compile_file = zend_compile_file;
-    zend_compile_file = xhp_compile_file;
-  }
+  dist_compile_file = zend_compile_file;
+  zend_compile_file = xhp_compile_file;
 
   xhp_tokenizer_register_constants(INIT_FUNC_ARGS_PASSTHRU);
 
