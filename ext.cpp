@@ -378,6 +378,10 @@ static PHP_MINFO_FUNCTION(xhp) {
 
 //
 // xhp_preprocess_code
+ZEND_BEGIN_ARG_INFO_EX(php_xhp_preprocess_code_arginfo, 0, 0, 0)
+  ZEND_ARG_TYPE_INFO(0, code, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_FUNCTION(xhp_preprocess_code) {
   // Parse zend params
   char *code;
@@ -404,6 +408,10 @@ ZEND_FUNCTION(xhp_preprocess_code) {
 
 //
 // xhp_token_get_all
+ZEND_BEGIN_ARG_INFO_EX(php_xhp_token_get_all_arginfo, 0, 0, 0)
+  ZEND_ARG_TYPE_INFO(0, source, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(xhp_token_get_all) {
   zend_string *source;
   zend_bool success;
@@ -419,6 +427,10 @@ PHP_FUNCTION(xhp_token_get_all) {
 
 //
 // xhp_token_name
+ZEND_BEGIN_ARG_INFO_EX(php_xhp_token_name_arginfo, 0, 0, 0)
+  ZEND_ARG_TYPE_INFO(0, type, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(xhp_token_name) {
   zend_long type;
 
@@ -430,6 +442,11 @@ PHP_FUNCTION(xhp_token_name) {
 }
 
 // xhp_rename_function
+ZEND_BEGIN_ARG_INFO_EX(php_xhp_rename_function_arginfo, 0, 0, 0)
+  ZEND_ARG_TYPE_INFO(0, orig_fname, IS_STRING, 0)
+  ZEND_ARG_TYPE_INFO(0, new_fname, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 PHP_FUNCTION(xhp_rename_function)
 {
   zend_string *orig_fname, *new_fname;
@@ -475,11 +492,11 @@ PHP_FUNCTION(xhp_rename_function)
 //
 // Module description
 zend_function_entry xhp_functions[] = {
-  ZEND_FE(xhp_preprocess_code, NULL)
-  PHP_FE(xhp_token_get_all, NULL)
-  PHP_FE(xhp_token_name, NULL)
-  PHP_FE(xhp_rename_function, NULL)
-  {NULL, NULL, NULL}
+  ZEND_FE(xhp_preprocess_code, php_xhp_preprocess_code_arginfo)
+  PHP_FE(xhp_token_get_all, php_xhp_token_get_all_arginfo)
+  PHP_FE(xhp_token_name, php_xhp_token_name_arginfo)
+  PHP_FE(xhp_rename_function, php_xhp_rename_function_arginfo)
+  PHP_FE_END
 };
 
 zend_module_entry xhp_module_entry = {
