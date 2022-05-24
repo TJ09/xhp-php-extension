@@ -179,12 +179,3 @@ And external resources about Zend Engine and Extension Writing:
 [PHP Internals Book](http://www.phpinternalsbook.com/) - By three core developers Copyright 2013, Julien Pauli - Anthony Ferrara - Nikita Popov.
 [PHP at the Core: A Hacker's Guide](http://php.net/manual/en/internals2.php) - Official manual written for the `Hacker`: someone thinking about getting their hands dirty, someone who wants an understanding of internals in order to advance their PHP skills, or maybe someone looking to write the next best extension.
 [nikic's Blog](https://nikic.github.io/) - Internal value representation in PHP 7 and others
-
-Archived Repo
-=============
-
-This is an archived project and is no longer supported or updated by Facebook. Please do not file issues or pull-requests against this repo. If you wish to continue to develop this code yourself, we recommend you fork it.
-
-This project just contains the PHP5 extension and core tests. The class library
-(which is required with both this extension and with HHVM) is available at
-https://github.com/facebook/xhp-lib/ and is still supported.
