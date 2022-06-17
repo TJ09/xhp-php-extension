@@ -400,6 +400,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   new tok(T_NEW);
   clone tok(T_CLONE);
   exit tok(T_EXIT);
+  die tok(T_EXIT);
   if tok(T_IF);
   elseif tok(T_ELSEIF);
   else tok(T_ELSE);
