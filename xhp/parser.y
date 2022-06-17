@@ -494,11 +494,14 @@ statement:
     $$ = $1 + $2;
   }
 | T_OPEN_TAG {
-    $$ = "<?php\n";
+    $$ = $1;
   }
 | T_OPEN_TAG_WITH_ECHO
 | T_OPEN_TAG_FAKE {
     $$ = "";
+  }
+| T_CLOSE_TAG {
+    $$ = $1;
   }
 ;
 

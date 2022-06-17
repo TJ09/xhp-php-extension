@@ -27,7 +27,7 @@ echo
 }
 
 --EXPECTF--
-%s/xhp_b.php:2
-%s/xhp_a.php:6 spl_autoload
+%s/xhp_b.php:3
+%s/xhp_a.php:7 spl_autoload
 
 Fatal error:%s

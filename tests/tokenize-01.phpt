@@ -6,6 +6,7 @@ $tokens = xhp_token_get_all(<<<'code'
 <?php
 
 echo "Cool!";
+?>
 code
 );
 
@@ -19,10 +20,12 @@ foreach($tokens as $tok) {
   echo PHP_EOL;
 }
 --EXPECT--
-TOKENS:6
+TOKENS:8
 T_OPEN_TAG 2
 T_WHITESPACE 3
 T_ECHO 3
 T_WHITESPACE 3
 T_CONSTANT_ENCAPSED_STRING 3
 ';'
+T_WHITESPACE 4
+T_CLOSE_TAG 4

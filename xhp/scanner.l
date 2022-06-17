@@ -966,7 +966,7 @@ static int yy_token(int tok, yyguts_t* yyg) {
 
     case T_CLOSE_TAG:
       push_state(INITIAL);
-      return ';';
+      break;
 
     // In PHP it's ok to use keywords such as 'if' as field names
     // or function names.
