@@ -355,7 +355,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 }
 <ST_PHP_EOL_COMMENT>{
   {NEWLINE} {
-    ++yyextra->lineno;
+    yyless(yyleng - 1);
     pop_state();
     tok(T_COMMENT);
   }
