@@ -558,7 +558,36 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 
  /* Numbers */
 <ST_PHP,ST_PHP_NO_RESERVED_WORDS,ST_XHP_ATTR_TYPE_DECL,ST_XHP_IN_TAG>{
-  {LNUM}|{HNUM}|{BNUM}|{ONUM} tok(T_LNUMBER);
+  {LNUM}|{HNUM}|{ONUM} tok(T_LNUMBER);
+  {BNUM} {
+    size_t len = yyleng - 2;
+    char *bin = yytext + 2;
+    bool contains_underscores;
+
+    /* Skip any leading 0s */
+    while (len > 0 && (*bin == '0' || *bin == '_')) {
+      ++bin;
+      --len;
+    }
+
+    contains_underscores = (memchr(bin, '_', len) != NULL);
+
+    if (contains_underscores) {
+      char *src = bin;
+      while (*src != '\0') {
+        if (*src == '_') {
+          --len;
+        }
+        src++;
+      }
+    }
+
+    if (len < 64) {
+      tok(T_LNUMBER);
+    } else {
+      tok(T_DNUMBER);
+    }
+  }
   {DNUM}|{EXPONENT_DNUM} tok(T_DNUMBER);
 }
 
