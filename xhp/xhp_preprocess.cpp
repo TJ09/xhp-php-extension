@@ -171,7 +171,7 @@ xhp_lex(char* &code_str, size_t &lineno, void *lex_state)
   xhp_lex_state_t *l = static_cast<xhp_lex_state_t*>(lex_state);
   if (l) {
     int tok = xhplex(&l->new_code, l->scanner);
-    lineno = l->extra.lineno;
+    lineno = l->extra.first_lineno;
     if (tok) {
       code_str = (char*)l->new_code.c_str();
     } else {
