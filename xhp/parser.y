@@ -1736,19 +1736,17 @@ array_pair:
 ;
 
 encaps_list:
-  // Intentional deviation from PHP: strings aren't parsed since XHP doesn't
-  // care about their contents, so we just allow all T_ENCAPSED_AND_WHITESPACE.
-  T_ENCAPSED_AND_WHITESPACE {
-    $$ = $1;
+  encaps_list encaps_var {
+    $$ = $1 + $2;
   }
 | encaps_list T_ENCAPSED_AND_WHITESPACE {
     $$ = $1 + $2;
   }
-| encaps_list encaps_var {
-    $$ = $1 + $2;
-  }
 | encaps_var {
     $$ = $1;
+  }
+| T_ENCAPSED_AND_WHITESPACE encaps_var {
+    $$ = $1 + $2;
   }
 ;
 

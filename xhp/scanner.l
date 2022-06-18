@@ -731,15 +731,12 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     yymore();
   }
   "$"{LABEL} {
-    yymore();
+    tok(T_VARIABLE);
   }
-  "{$"{LABEL}"->:"{LABEL_START} {
+  "{$" {
     yyless(1);
     push_state(ST_PHP);
     tok(T_CURLY_OPEN);
-  }
-  "{$" {
-    yymore();
   }
   {DOUBLE_QUOTES_CHARS}+ {
     yy_scan_newlines(yytext, yyg);
