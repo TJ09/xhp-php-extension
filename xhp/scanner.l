@@ -479,7 +479,10 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   namespace tok(T_NAMESPACE);
   trait tok(T_TRAIT);
   insteadof tok(T_INSTEADOF);
-  "yield from" tok(T_YIELD_FROM);
+  "yield"{WHITESPACE}"from" {
+    yy_scan_newlines(yytext, yyg);
+    tok(T_YIELD_FROM);
+  }
   "#[" tok(T_ATTRIBUTE);
   yield tok(T_YIELD);
   "..." tok(T_ELLIPSIS);
