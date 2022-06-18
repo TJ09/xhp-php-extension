@@ -596,7 +596,30 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 
  /* Numbers */
 <ST_PHP,ST_PHP_NO_RESERVED_WORDS,ST_XHP_ATTR_TYPE_DECL,ST_XHP_IN_TAG>{
-  {LNUM} tok(T_LNUMBER);
+  {LNUM} {
+    size_t len = yyleng;
+    char *end, *lnum = yytext;
+    bool is_octal = lnum[0] == '0';
+    bool contains_underscores = (memchr(lnum, '_', len) != NULL);
+
+    if (contains_underscores) {
+      lnum = strndup(lnum, len);
+      strip_underscores(lnum, &len);
+    }
+
+    errno = 0;
+    strtoll(lnum, &end, is_octal ? 8 : 10);
+
+    if (contains_underscores) {
+      free(lnum);
+    }
+
+    if (!errno) {
+      tok(T_LNUMBER);
+    } else {
+      tok(T_DNUMBER);
+    }
+  }
   {BNUM} {
     /* The +/- 2 skips "0b" */
     size_t len = yyleng - 2;
