@@ -13,8 +13,6 @@ echo "if (! defined('T_BACKTICKS_EXPR') )";
 echo "	define('T_BACKTICKS_EXPR', ".T_BACKTICKS_EXPR.");" . PHP_EOL;
 echo "if (! defined('T_OPEN_TAG_FAKE') )";
 echo "	define('T_OPEN_TAG_FAKE', ".T_OPEN_TAG_FAKE.");" . PHP_EOL;
-echo "if (! defined('T_HEREDOC') )";
-echo "	define('T_HEREDOC', ".T_HEREDOC.");" . PHP_EOL;
 echo "if (! defined('T_XHP_WHITESPACE') )";
 echo "	define('T_XHP_WHITESPACE', ".T_XHP_WHITESPACE.");" . PHP_EOL;
 echo "if (! defined('T_XHP_TEXT') )";

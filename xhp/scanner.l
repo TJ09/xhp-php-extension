@@ -59,6 +59,9 @@
     return yy_token(ft, yyg); \
   }
 
+#define IS_LABEL_START(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || (c) == '_' || (c) >= 0x7F)
+#define IS_LABEL_SUCCESSOR(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || ((c) >= '0' && (c) <= '9') || (c) == '_' || (c) >= 0x80)
+
 using namespace std;
 
 const char* yytokname(int tok);
@@ -198,8 +201,8 @@ static bool shouldReturnToken(int t, bool force)
 %x ST_PHP_DOC_COMMENT
 %x ST_PHP_HEREDOC_START
 %x ST_PHP_HEREDOC_NSTART
-%x ST_PHP_HEREDOC_NEWLINE
-%x ST_PHP_HEREDOC_DATA
+%x ST_PHP_HEREDOC
+%x ST_PHP_HEREDOC_END
 %x ST_PHP_NO_RESERVED_WORDS
 %x ST_XHP_IN_TAG
 %x ST_XHP_CHILD
@@ -768,56 +771,122 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     // match is similar to calculate length.
     yyextra->heredoc_label = string(yytext + yyextra->heredoc_yyleng + 1, yyleng - yyextra->heredoc_yyleng - 2);
     set_state(ST_PHP_HEREDOC_NSTART);
-    yyextra->heredoc_yyleng = yyleng;
+    yyextra->heredoc_is_nowdoc = true;
     yymore();
   }
   {LABEL} {
     yyextra->heredoc_label = string(yytext + yyextra->heredoc_yyleng);
     set_state(ST_PHP_HEREDOC_NSTART);
-    yyextra->heredoc_yyleng = yyleng;
+    yyextra->heredoc_is_nowdoc = false;
     yymore();
   }
 }
 <ST_PHP_HEREDOC_NSTART>{NEWLINE} {
   ++yyextra->lineno;
-  yyextra->heredoc_data = yytext + yyleng;
-  set_state(ST_PHP_HEREDOC_DATA);
-  yymore();
+  set_state(ST_PHP_HEREDOC);
+  yyextra->heredoc_checked_for_immediate_end = false;
+  yyextra->heredoc_yyleng = 0;
+  tok(T_START_HEREDOC);
 }
-<ST_PHP_HEREDOC_DATA>{
-  [^\r\n]*{NEWLINE} {
-    ++yyextra->lineno;
-    set_state(ST_PHP_HEREDOC_NEWLINE);
-    yyextra->heredoc_yyleng = yyleng;
-    yymore();
-  }
-}
-<ST_PHP_HEREDOC_NEWLINE>{
-  {LABEL};?{NEWLINE} {
-    if (strncmp(yyextra->heredoc_label.c_str(), yytext + yyextra->heredoc_yyleng, yyextra->heredoc_label.size()) == 0) {
-      switch (yytext[yyextra->heredoc_yyleng + yyextra->heredoc_label.size()]) {
-        case ';': case '\n': case '\r':
-          yyless(yyleng - (yyleng - yyextra->heredoc_yyleng - yyextra->heredoc_label.size()));
-          pop_state();
-          tok(T_HEREDOC);
-      }
+<ST_PHP_HEREDOC>{
+  "$"{LABEL} {
+    if (yyextra->heredoc_is_nowdoc == true) {
+      yymore();
+    } else {
+      tok(T_VARIABLE);
     }
-    ++yyextra->lineno;
-    yyextra->heredoc_yyleng = yyleng;
-    yymore();
   }
-  [^\r\n]+ {
-    set_state(ST_PHP_HEREDOC_DATA);
-    yyextra->heredoc_yyleng = yyleng;
-    yymore();
+  "{$" {
+    if (yyextra->heredoc_is_nowdoc == true) {
+      yymore();
+    } else {
+      yyless(1);
+      push_state(ST_PHP);
+      tok(T_CURLY_OPEN);
+    }
   }
-  {NEWLINE} {
-    ++yyextra->lineno;
-    yyextra->heredoc_yyleng = yyleng;
-    yymore();
+  [^$\{]{ANY_CHAR}+ {
+    char* cursor = yytext;
+
+    int indentation = 0;
+
+    // If we just began the heredoc, check for an immediate end label.
+    if (yyextra->heredoc_checked_for_immediate_end == false) {
+      --cursor;
+      --yyextra->lineno;
+      yyextra->heredoc_checked_for_immediate_end = true;
+    }
+
+    while(*cursor) {
+      switch(*cursor++) {
+        case '\r':
+          if (*cursor == '\n') {
+            cursor++;
+          }
+          /* intentional fallthrough */
+        case '\n':
+          ++yyextra->lineno;
+
+          indentation = 0;
+
+          while(*cursor && (*cursor == ' ' || *cursor == '\t')) {
+            ++cursor;
+            ++indentation;
+          }
+
+          if (!*cursor) {
+            goto heredoc_scan_done;
+          }
+
+          /* Check for ending label on the next line */
+          if (strncmp(yyextra->heredoc_label.c_str(), cursor, yyextra->heredoc_label.size()) == 0) {
+
+            if (IS_LABEL_SUCCESSOR(cursor[yyextra->heredoc_label.size()])) {
+              continue;
+            }
+
+            cursor -= indentation;
+
+            set_state(ST_PHP_HEREDOC_END);
+            goto heredoc_scan_done;
+          }
+          continue;
+        case '$':
+          if (yyextra->heredoc_is_nowdoc == false && (IS_LABEL_START(*cursor) || *cursor == '{')) {
+            break;
+          }
+          continue;
+        case '{':
+          if (yyextra->heredoc_is_nowdoc == false && *cursor == '$') {
+            break;
+          }
+          continue;
+        case '\\':
+          if (*cursor && *cursor != '\n' && *cursor != '\r') {
+            cursor++;
+          }
+          continue;
+        default:
+          continue;
+      }
+
+      cursor--;
+      break;
+    }
+    heredoc_scan_done:
+      yyless(cursor - yytext);
+      if (cursor != yytext) {
+        tok(T_ENCAPSED_AND_WHITESPACE);
+      }
   }
 }
 
+<ST_PHP_HEREDOC_END>{
+  {TABS_AND_SPACES}{LABEL} {
+    pop_state();
+    tok(T_END_HEREDOC);
+  }
+}
 
  /* XHP */
 <ST_XHP_IN_TAG>{
@@ -942,10 +1011,10 @@ static const char* yy_state_name(int state) {
       return "ST_PHP_HEREDOC_START";
     case ST_PHP_HEREDOC_NSTART:
       return "ST_PHP_HEREDOC_NSTART";
-    case ST_PHP_HEREDOC_NEWLINE:
-      return "ST_PHP_HEREDOC_NEWLINE";
-    case ST_PHP_HEREDOC_DATA:
-      return "ST_PHP_HEREDOC_DATA";
+    case ST_PHP_HEREDOC:
+      return "ST_PHP_HEREDOC";
+    case ST_PHP_HEREDOC_END:
+      return "ST_PHP_HEREDOC_END";
     case ST_PHP_NO_RESERVED_WORDS:
       return "ST_PHP_NO_RESERVED_WORDS";
     case ST_XHP_CHILD:
@@ -956,6 +1025,8 @@ static const char* yy_state_name(int state) {
       return "XHP_CHILDREN_DECL";
     case ST_XHP_COMMENT:
       return "ST_XHP_COMMENT";
+    case ST_DOUBLE_QUOTES:
+      return "ST_DOUBLE_QUOTES";
     default:
       return "???";
   }
@@ -974,6 +1045,12 @@ static void yy_log_token(int tok) {
 static int yy_token(int tok, yyguts_t* yyg) {
   if (YY_START == ST_PHP_NO_RESERVED_WORDS) {
     pop_state();
+  }
+
+  if (tok != T_START_HEREDOC) {
+    // If we encounter anything after starting a heredoc, then it's pretty
+    // obvious that the heredoc end label isn't immediately after the start.
+    yyextra->heredoc_checked_for_immediate_end = true;
   }
 
   switch (tok) {
@@ -1011,7 +1088,7 @@ static int yy_token(int tok, yyguts_t* yyg) {
 
   }
 #ifdef DEBUG
-  yy_log_token(tok);
+  yy_log_token(tok, yyg);
 #endif
   if (shouldReturnToken(tok, false)) {
     yyextra->last_token = tok;

@@ -52,8 +52,9 @@ class yy_extra_type {
     int last_token; // the last token to be returned by the scanner
     int insert_token; // insert this token without reading from buffer
     size_t heredoc_yyleng; // last length of yytext while scannling
-    const char* heredoc_data; // where our heredoc data starts
     std::string heredoc_label; // heredoc sentinel label
+    bool heredoc_is_nowdoc; // whether the current heredoc is actually a nowdoc.
+    bool heredoc_checked_for_immediate_end; // check whether we've looked for an end label right after the start lavel.
     code_rope doc_block; // last docblock to be scanned
     bool has_doc_block; // is there a scanned docblock that needs to inserted?
     std::stack<int> curly_stack; // tokens appearing before a {

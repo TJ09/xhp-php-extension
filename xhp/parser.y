@@ -244,7 +244,6 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_BAD_CHARACTER 401
 
 // XHP-specific tokens
-%token T_HEREDOC 5000
 %token T_BACKTICKS_EXPR 5001
 %token T_XHP_WHITESPACE 5002
 %token T_XHP_TEXT 5003
@@ -1553,7 +1552,9 @@ dereferenceable_scalar:
 scalar:
   T_LNUMBER
 | T_DNUMBER
-| T_HEREDOC
+| T_START_HEREDOC T_ENCAPSED_AND_WHITESPACE T_END_HEREDOC { $$ = $1 + $2 + $3; }
+| T_START_HEREDOC T_END_HEREDOC { $$ = $1 + $2; }
+| T_START_HEREDOC encaps_list T_END_HEREDOC { $$ = $1 + $2 + $3; }
 | dereferenceable_scalar
 | constant
 | class_constant
@@ -2216,7 +2217,9 @@ xhp_attribute_enum_value:
 | T_FUNC_C
 | T_NS_C
 | T_CLASS_C
-| T_HEREDOC
+| T_START_HEREDOC T_ENCAPSED_AND_WHITESPACE T_END_HEREDOC
+| T_START_HEREDOC T_END_HEREDOC
+| T_START_HEREDOC encaps_list T_END_HEREDOC
 ;
 
 xhp_attribute_enum:
