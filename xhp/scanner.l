@@ -385,6 +385,10 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     tok(T_COMMENT);
   }
   . yymore();
+  <<EOF>> {
+    pop_state();
+    tok(T_COMMENT);
+  }
 }
 <ST_PHP_DOC_COMMENT,ST_PHP_COMMENT>{
   {NEWLINE} {
@@ -394,8 +398,14 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   [^*\r\n]+|"*" yymore();
 }
 <ST_PHP_DOC_COMMENT>"*/" {
-  yyextra->doc_block = code_rope(yytext, yyextra->first_lineno, yyextra->lineno - yyextra->first_lineno);
-  yyextra->has_doc_block = true;
+  if (!yyextra->return_all_tokens) {
+    // If we're tokenizing, the emitted token has the comment, so we don't need
+    // to copy it over to the next token. Otherwise, the parser drops all
+    // comments, so the definition of yy_token below will attach doc comments
+    // to the next token so they survive.
+    yyextra->doc_block = code_rope(yytext, yyextra->first_lineno, yyextra->lineno - yyextra->first_lineno);
+    yyextra->has_doc_block = true;
+  }
   pop_state();
   tok(T_DOC_COMMENT);
 }
