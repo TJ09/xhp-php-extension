@@ -230,6 +230,9 @@ static void strip_underscores(char *str, size_t *len)
 %x ST_XHP_END_CLOSE_TAG
 %x ST_DOUBLE_QUOTES
 %x ST_LOOKING_FOR_PROPERTY
+%x ST_LOOKING_FOR_XHP_ATTRIBUTE
+%x ST_LOOKING_FOR_VARNAME
+%x ST_VAR_OFFSET
 
 %option prefix="xhp"
 %option reentrant
@@ -848,10 +851,10 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   tok('<');
 }
 
- /* Double Quotes */
-<ST_DOUBLE_QUOTES>{
+<ST_DOUBLE_QUOTES,ST_PHP_HEREDOC>{
   "${" {
-    yymore();
+    push_state(ST_LOOKING_FOR_VARNAME);
+    tok(T_DOLLAR_OPEN_CURLY_BRACES);
   }
   "$$"/[^a-zA-Z_\x7f-\xff${] {
     yymore();
@@ -866,6 +869,11 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     push_state(ST_LOOKING_FOR_PROPERTY);
     tok(T_VARIABLE);
   }
+  "$"{LABEL}"[" {
+    yyless(yyleng - 1);
+    push_state(ST_VAR_OFFSET);
+    tok(T_VARIABLE);
+  }
   "$"{LABEL} {
     tok(T_VARIABLE);
   }
@@ -874,6 +882,8 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     push_state(ST_PHP);
     tok(T_CURLY_OPEN);
   }
+}
+<ST_DOUBLE_QUOTES>{
   {DOUBLE_QUOTES_CHARS}+ {
     yy_scan_newlines(yytext, yyg);
     tok(T_ENCAPSED_AND_WHITESPACE);
@@ -886,6 +896,50 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   [\"] {
     pop_state();
     tok('"');
+  }
+}
+
+<ST_LOOKING_FOR_VARNAME>{
+  {LABEL}[[}] {
+    yyless(yyleng - 1);
+    pop_state();
+    push_state(ST_PHP);
+    tok(T_STRING_VARNAME);
+  }
+  {ANY_CHAR} {
+    yyless(0);
+    pop_state();
+    push_state(ST_PHP);
+  }
+}
+
+<ST_VAR_OFFSET>{
+  [0]|([1-9][0-9]*) {
+    tok(T_NUM_STRING);
+  }
+  {LNUM}|{HNUM}|{BNUM}|{ONUM} {
+    tok(T_NUM_STRING);
+  }
+  "$"{LABEL} {
+    tok(T_VARIABLE);
+  }
+  "]" {
+    pop_state();
+    tok(']');
+  }
+  {TOKENS}|[[(){}"`] {
+    tok(yytext[0]);
+  }
+  [ \n\r\t\\'#] {
+    yyless(0);
+    pop_state();
+    tok(T_ENCAPSED_AND_WHITESPACE);
+  }
+  {LABEL} {
+    tok(T_STRING);
+  }
+  {ANY_CHAR} {
+    tok(T_BAD_CHARACTER);
   }
 }
 
@@ -921,22 +975,6 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   tok(T_START_HEREDOC);
 }
 <ST_PHP_HEREDOC>{
-  "$"{LABEL} {
-    if (yyextra->heredoc_is_nowdoc == true) {
-      yymore();
-    } else {
-      tok(T_VARIABLE);
-    }
-  }
-  "{$" {
-    if (yyextra->heredoc_is_nowdoc == true) {
-      yymore();
-    } else {
-      yyless(1);
-      push_state(ST_PHP);
-      tok(T_CURLY_OPEN);
-    }
-  }
   [^$\{]{ANY_CHAR}+ {
     char* cursor = yytext;
 
@@ -1021,11 +1059,16 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 }
 
 <ST_LOOKING_FOR_PROPERTY>{
+  {WHITESPACE}+ {
+    yy_scan_newlines(yytext, yyg);
+    tok(T_WHITESPACE);
+  }
   "->" tok(T_OBJECT_OPERATOR);
   "?->" tok(T_NULLSAFE_OBJECT_OPERATOR);
-  ":"{XHPLABEL} {
+  ":" {
     pop_state();
-    tok(T_XHP_LABEL);
+    push_state(ST_LOOKING_FOR_XHP_ATTRIBUTE);
+    tok(':');
   }
   {LABEL} {
     pop_state();
@@ -1036,6 +1079,19 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     pop_state();
   }
 }
+
+<ST_LOOKING_FOR_XHP_ATTRIBUTE>{
+  {XHPLABEL} {
+    pop_state();
+    tok(T_XHP_LABEL);
+  }
+  {ANY_CHAR} {
+    yyless(0);
+    pop_state();
+  }
+}
+
+
 
  /* XHP */
 <ST_XHP_IN_TAG>{
@@ -1178,6 +1234,12 @@ static const char* yy_state_name(int state) {
       return "ST_DOUBLE_QUOTES";
     case ST_LOOKING_FOR_PROPERTY:
       return "ST_LOOKING_FOR_PROPERTY";
+    case ST_LOOKING_FOR_VARNAME:
+      return "ST_LOOKING_FOR_VARNAME";
+    case ST_LOOKING_FOR_XHP_ATTRIBUTE:
+      return "ST_LOOKING_FOR_XHP_ATTRIBUTE";
+    case ST_VAR_OFFSET:
+      return "ST_VAR_OFFSET";
     default:
       return "???";
   }
@@ -1224,7 +1286,6 @@ static int yy_token(int tok, yyguts_t* yyg) {
 
     // In PHP it's ok to use keywords such as 'if' as field names
     // or function names.
-    case T_OBJECT_OPERATOR:
     case T_PAAMAYIM_NEKUDOTAYIM:
     case T_FUNCTION:
     case T_CLASS:
