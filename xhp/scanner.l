@@ -214,6 +214,7 @@ static bool shouldReturnToken(int t, bool force)
 %x ST_LOOKING_FOR_COLON
 %x ST_XHP_END_CLOSE_TAG
 %x ST_DOUBLE_QUOTES
+%x ST_LOOKING_FOR_PROPERTY
 
 %option prefix="xhp"
 %option reentrant
@@ -523,8 +524,14 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   ">>" tok(T_SR);
   "++" tok(T_INC);
   "--" tok(T_DEC);
-  "?->" tok(T_NULLSAFE_OBJECT_OPERATOR);
-  "->" tok(T_OBJECT_OPERATOR);
+  "?->" {
+    push_state(ST_LOOKING_FOR_PROPERTY);
+    tok(T_NULLSAFE_OBJECT_OPERATOR);
+  }
+  "->" {
+    push_state(ST_LOOKING_FOR_PROPERTY);
+    tok(T_OBJECT_OPERATOR);
+  }
   "=>" tok(T_DOUBLE_ARROW);
   "::" tok(T_PAAMAYIM_NEKUDOTAYIM);
   "??" tok(T_COALESCE);
@@ -733,6 +740,16 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "$$"/[^a-zA-Z_\x7f-\xff${] {
     yymore();
   }
+  "$"{LABEL}"->"[a-zA-Z_\x80-\xff] {
+    yyless(yyleng - 3);
+    push_state(ST_LOOKING_FOR_PROPERTY);
+    tok(T_VARIABLE);
+  }
+  "$"{LABEL}"?->"[a-zA-Z_\x80-\xff] {
+    yyless(yyleng - 4);
+    push_state(ST_LOOKING_FOR_PROPERTY);
+    tok(T_VARIABLE);
+  }
   "$"{LABEL} {
     tok(T_VARIABLE);
   }
@@ -755,7 +772,6 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     tok('"');
   }
 }
-
 
  /* (HERE|NOW)DOC's */
 <ST_PHP,ST_PHP_NO_RESERVED_WORDS>b?"<<<"{TABS_AND_SPACES} {
@@ -885,6 +901,23 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   {TABS_AND_SPACES}{LABEL} {
     pop_state();
     tok(T_END_HEREDOC);
+  }
+}
+
+<ST_LOOKING_FOR_PROPERTY>{
+  "->" tok(T_OBJECT_OPERATOR);
+  "?->" tok(T_NULLSAFE_OBJECT_OPERATOR);
+  ":"{XHPLABEL} {
+    pop_state();
+    tok(T_XHP_LABEL);
+  }
+  {LABEL} {
+    pop_state();
+    tok(T_STRING);
+  }
+  {ANY_CHAR} {
+    yyless(0);
+    pop_state();
   }
 }
 
@@ -1027,6 +1060,8 @@ static const char* yy_state_name(int state) {
       return "ST_XHP_COMMENT";
     case ST_DOUBLE_QUOTES:
       return "ST_DOUBLE_QUOTES";
+    case ST_LOOKING_FOR_PROPERTY:
+      return "ST_LOOKING_FOR_PROPERTY";
     default:
       return "???";
   }
