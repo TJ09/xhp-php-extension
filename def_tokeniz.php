@@ -45,8 +45,6 @@ echo "if (! defined('T_XHP_ENUM') )";
 echo "	define('T_XHP_ENUM', ".T_XHP_ENUM.");" . PHP_EOL;
 echo "if (! defined('T_XHP_FLOAT') )";
 echo "	define('T_XHP_FLOAT', ".T_XHP_FLOAT.");" . PHP_EOL;
-echo "if (! defined('T_XHP_CALLABLE') )";
-echo "	define('T_XHP_CALLABLE', ".T_XHP_CALLABLE.");" . PHP_EOL;
 echo "if (! defined('T_XHP_REQUIRED') )";
 echo "	define('T_XHP_REQUIRED', ".T_XHP_REQUIRED.");" . PHP_EOL;
 echo "if (! defined('T_XHP_LABEL') )";

@@ -261,7 +261,6 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_XHP_STRING 5015
 %token T_XHP_ENUM 5016
 %token T_XHP_FLOAT 5017
-%token T_XHP_CALLABLE 5018
 %token T_XHP_REQUIRED 5019
 %token T_XHP_LABEL 5020
 
@@ -2155,7 +2154,7 @@ xhp_attribute_decl_type:
 | T_XHP_FLOAT {
     $$ = "8, null";
   }
-| T_XHP_CALLABLE {
+| T_CALLABLE {
     $$ = "9, null";
   }
 ;
@@ -2200,7 +2199,7 @@ xhp_attribute_array_value_type:
 | T_XHP_FLOAT {
     $$ = "8";
   }
-| T_XHP_CALLABLE {
+| T_CALLABLE {
     $$ = "9";
   }
 ;

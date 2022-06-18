@@ -293,7 +293,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "bool"     tok(T_XHP_BOOLEAN);
   "int"      tok(T_XHP_NUMBER);
   "float"    tok(T_XHP_FLOAT);
-  "callable" tok(T_XHP_CALLABLE);
+  "callable" tok(T_CALLABLE);
   "var"      tok(T_VAR);
   "mixed"    tok(T_XHP_MIXED);
   "array"    tok(T_ARRAY);
@@ -480,6 +480,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   implements tok(T_IMPLEMENTS);
   list tok(T_LIST);
   array tok(T_ARRAY);
+  callable tok(T_CALLABLE);
   __class__ tok(T_CLASS_C);
   __method__ tok(T_METHOD_C);
   __function__ tok(T_FUNC_C);
