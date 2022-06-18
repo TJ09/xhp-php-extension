@@ -191,6 +191,21 @@ static bool shouldReturnToken(int t, bool force)
     return true;
 }
 
+static void strip_underscores(char *str, size_t *len)
+{
+  char *src = str, *dest = str;
+  while (*src != '\0') {
+    if (*src != '_') {
+      *dest = *src;
+      dest++;
+    } else {
+      --(*len);
+    }
+    src++;
+  }
+  *dest = '\0';
+}
+
 %}
 
  /* The different lexing states. Note that the transitions are done either
@@ -568,8 +583,9 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 
  /* Numbers */
 <ST_PHP,ST_PHP_NO_RESERVED_WORDS,ST_XHP_ATTR_TYPE_DECL,ST_XHP_IN_TAG>{
-  {LNUM}|{HNUM}|{ONUM} tok(T_LNUMBER);
+  {LNUM} tok(T_LNUMBER);
   {BNUM} {
+    /* The +/- 2 skips "0b" */
     size_t len = yyleng - 2;
     char *bin = yytext + 2;
     bool contains_underscores;
@@ -593,6 +609,69 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     }
 
     if (len < 64) {
+      tok(T_LNUMBER);
+    } else {
+      tok(T_DNUMBER);
+    }
+  }
+  {ONUM} {
+    /* The +/- 2 skips "0o" */
+    size_t len = yyleng - 2;
+    char *end, *octal = yytext + 2;
+    bool contains_underscores;
+
+    /* Skip any leading 0s */
+    while (len > 0 && (*octal == '0' || *octal == '_')) {
+      ++octal;
+      --len;
+    }
+
+    contains_underscores = (memchr(octal, '_', len) != NULL);
+
+    if (contains_underscores) {
+      octal = strndup(octal, len);
+      strip_underscores(octal, &len);
+    }
+
+    errno = 0;
+    strtoll(octal, &end, 8);
+
+    if (contains_underscores) {
+      free(octal);
+    }
+
+    if (!errno) {
+      // Octal fits into a long.
+      tok(T_LNUMBER);
+    } else {
+      tok(T_DNUMBER);
+    }
+  }
+  {HNUM} {
+    /* The +/- 2 skips "0x" */
+    size_t len = yyleng - 2;
+    char *hex = yytext + 2;
+    bool contains_underscores;
+
+    /* Skip any leading 0s */
+    while (len > 0 && (*hex == '0' || *hex == '_')) {
+      ++hex;
+      --len;
+    }
+
+    contains_underscores = (memchr(hex, '_', len) != NULL);
+
+    if (contains_underscores) {
+      char *src = hex;
+      while (*src != '\0') {
+        if (*src == '_') {
+          --len;
+        }
+        src++;
+      }
+    }
+
+    if (len < 16 || (len == 16 && *hex <= '7')) {
       tok(T_LNUMBER);
     } else {
       tok(T_DNUMBER);
