@@ -228,6 +228,7 @@ static void strip_underscores(char *str, size_t *len)
 %x ST_LT_CHECK
 %x ST_LOOKING_FOR_COLON
 %x ST_XHP_END_CLOSE_TAG
+%x ST_BACKQUOTE
 %x ST_DOUBLE_QUOTES
 %x ST_LOOKING_FOR_PROPERTY
 %x ST_LOOKING_FOR_XHP_ATTRIBUTE
@@ -765,9 +766,9 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     push_state(ST_DOUBLE_QUOTES);
     tok('"');
   }
-  `[^`]*` {
-    yy_scan_newlines(yytext, yyg);
-    tok(T_BACKTICKS_EXPR);
+  ` {
+    push_state(ST_BACKQUOTE);
+    tok('`');
   }
 }
 
@@ -851,7 +852,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   tok('<');
 }
 
-<ST_DOUBLE_QUOTES,ST_PHP_HEREDOC>{
+<ST_DOUBLE_QUOTES,ST_BACKQUOTE,ST_PHP_HEREDOC>{
   "${" {
     push_state(ST_LOOKING_FOR_VARNAME);
     tok(T_DOLLAR_OPEN_CURLY_BRACES);
@@ -896,6 +897,22 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   [\"] {
     pop_state();
     tok('"');
+  }
+}
+
+<ST_BACKQUOTE>{
+  {BACKQUOTE_CHARS}+ {
+    yy_scan_newlines(yytext, yyg);
+    tok(T_ENCAPSED_AND_WHITESPACE);
+  }
+  {BACKQUOTE_CHARS}*("{"{2,}|"$"{2,}|(("{"+|"$"+)[\"])) {
+    yy_scan_newlines(yytext, yyg);
+    yyless(yyleng - 1);
+    tok(T_ENCAPSED_AND_WHITESPACE);
+  }
+  [\`] {
+    pop_state();
+    tok('`');
   }
 }
 
@@ -1230,6 +1247,8 @@ static const char* yy_state_name(int state) {
       return "XHP_CHILDREN_DECL";
     case ST_XHP_COMMENT:
       return "ST_XHP_COMMENT";
+    case ST_BACKQUOTE:
+      return "ST_BACKQUOTE";
     case ST_DOUBLE_QUOTES:
       return "ST_DOUBLE_QUOTES";
     case ST_LOOKING_FOR_PROPERTY:

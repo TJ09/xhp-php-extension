@@ -244,7 +244,6 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_BAD_CHARACTER 401
 
 // XHP-specific tokens
-%token T_BACKTICKS_EXPR 5001
 %token T_XHP_WHITESPACE 5002
 %token T_XHP_TEXT 5003
 %token T_XHP_ATTRIBUTE 5004
@@ -1410,7 +1409,9 @@ expr:
     $$ = $1 + $2;
   }
 | scalar
-| T_BACKTICKS_EXPR
+| '`' backticks_expr '`' {
+    $$ = $1 + $2 + $3;
+  }
 | T_PRINT expr {
     $$ = $1 + " " + $2;
   }
@@ -1525,6 +1526,18 @@ exit_expr:
   }
 | '(' optional_expr')' {
     $$ = $1 + $2 + $3;
+  }
+;
+
+backticks_expr:
+  %empty {
+    $$ = "";
+  }
+| T_ENCAPSED_AND_WHITESPACE {
+    $$ = $1;
+  }
+| encaps_list {
+    $$ = $1;
   }
 ;
 
