@@ -57,6 +57,10 @@ void code_rope::strip_lines() {
   lf = no = 0;
 }
 
+size_t code_rope::length() const {
+  return this->str.length();
+}
+
 size_t code_rope::lineno() const {
   return no;
 }

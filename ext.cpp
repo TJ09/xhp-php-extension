@@ -291,7 +291,7 @@ static zend_bool tokenize(zval *return_value, zend_string *source)
   array_init(return_value);
 
   char *val = ZSTR_VAL(source);
-  string in(val);
+  string in(val, source->len);
 
   // Create a flex buffer
   in.reserve(in.size() + 1);
@@ -304,9 +304,11 @@ static zend_bool tokenize(zval *return_value, zend_string *source)
   char *code_str;
 
   int64_t tok;
-  size_t lineno;
-  while(tok = xhp_lex(code_str, lineno, lex_state)) {
-    string code_s(code_str);
+  size_t code_str_len, lineno;
+  while(tok = xhp_lex(code_str, code_str_len, lineno, lex_state)) {
+    // tokens should contain at least one character, but sometimes that character is a
+    // null byte.
+    string code_s(code_str, code_str_len);
 
     if (tok >= 256) {
         zval keyword;

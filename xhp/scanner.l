@@ -40,14 +40,14 @@
     yyextra->first_lineno = yyextra->lineno;
 
 #define tok_consume() \
-  *yylval = code_rope(yytext, yyextra->first_lineno, yyextra->lineno - yyextra->first_lineno)
+  *yylval = code_rope(code_rope::_rope_t(yytext, yyleng), yyextra->first_lineno, yyextra->lineno - yyextra->first_lineno)
 
 #define tok_return(t) \
   if (shouldReturnToken(t, yyextra->return_all_tokens)) \
     return yy_token(t, yyg)
 
 #define tok(t) \
-  *yylval = code_rope(yytext, yyextra->first_lineno, yyextra->lineno - yyextra->first_lineno); \
+  *yylval = code_rope(code_rope::_rope_t(yytext, yyleng), yyextra->first_lineno, yyextra->lineno - yyextra->first_lineno); \
   if (shouldReturnToken(t, yyextra->return_all_tokens)) \
     return yy_token(t, yyg)
 
@@ -66,7 +66,7 @@ using namespace std;
 
 const char* yytokname(int tok);
 static int yy_token(int tok, struct yyguts_t* yyg);
-static void yy_scan_newlines(const char* text, struct yyguts_t* yyg);
+static void yy_scan_newlines(const char* text, size_t len, struct yyguts_t* yyg);
 
 /**
  * "Next token types" tell us how to interpret the next characters in the
@@ -329,7 +329,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
  /* Open / close PHP + inline HTML */
 <INITIAL>{
   "<?php"([ \t]|{NEWLINE}) {
-    yy_scan_newlines(yytext + 5, yyg);
+    yy_scan_newlines(yytext + 5, yyleng - 5, yyg);
     // the state transition will be done in yy_token()
     tok(T_OPEN_TAG);
   }
@@ -348,13 +348,13 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     }
   }
   "<"|[^<]* {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     tok(T_INLINE_HTML);
   }
 }
 <ST_PHP,ST_PHP_NO_RESERVED_WORDS>{
   "?>"{NEWLINE}? {
-    yy_scan_newlines(yytext + 2, yyg);
+    yy_scan_newlines(yytext + 2, yyleng - 2, yyg);
     tok(T_CLOSE_TAG);
   }
 }
@@ -366,7 +366,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     yymore();
   }
   "/**"{WHITESPACE} {
-    yy_scan_newlines(yytext + 3, yyg);
+    yy_scan_newlines(yytext + 3, yyleng - 3, yyg);
     push_state(ST_PHP_DOC_COMMENT);
     yymore();
   }
@@ -374,7 +374,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     push_state(ST_PHP_COMMENT);
     yymore();
   }
-  {WHITESPACE}+ { yy_scan_newlines(yytext, yyg); tok(T_WHITESPACE); }
+  {WHITESPACE}+ { yy_scan_newlines(yytext, yyleng, yyg); tok(T_WHITESPACE); }
 }
 <ST_PHP_EOL_COMMENT>{
   {NEWLINE} {
@@ -390,6 +390,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   }
   . yymore();
   <<EOF>> {
+    yyless(yyleng - 1);
     pop_state();
     tok(T_COMMENT);
   }
@@ -495,7 +496,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   trait tok(T_TRAIT);
   insteadof tok(T_INSTEADOF);
   "yield"{WHITESPACE}"from" {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     tok(T_YIELD_FROM);
   }
   "#[" tok(T_ATTRIBUTE);
@@ -746,7 +747,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
  /* Scalars (parsing these doesn't really matter since we just pass them through literally) */
  /*
   b?'(\\.|\\\n|[^\\']+)*'|b?\"(\\.|\\\n|[^\\\"]+)*\" {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     tok(T_CONSTANT_ENCAPSED_STRING);
   }
   */
@@ -754,7 +755,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   {LABEL} tok(T_STRING);
   "$"{LABEL} tok(T_VARIABLE);
   (b?[\"]{DOUBLE_QUOTES_CHARS}*("{"*|"$"*)[\"]) {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     tok(T_CONSTANT_ENCAPSED_STRING);
   }
   (b?[\']([^\'\\]|("\\"{ANY_CHAR}))*[\']?) {
@@ -886,11 +887,11 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 }
 <ST_DOUBLE_QUOTES>{
   {DOUBLE_QUOTES_CHARS}+ {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     tok(T_ENCAPSED_AND_WHITESPACE);
   }
   {DOUBLE_QUOTES_CHARS}*("{"{2,}|"$"{2,}|(("{"+|"$"+)[\"])) {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     yyless(yyleng - 1);
     tok(T_ENCAPSED_AND_WHITESPACE);
   }
@@ -902,11 +903,11 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 
 <ST_BACKQUOTE>{
   {BACKQUOTE_CHARS}+ {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     tok(T_ENCAPSED_AND_WHITESPACE);
   }
   {BACKQUOTE_CHARS}*("{"{2,}|"$"{2,}|(("{"+|"$"+)[\"])) {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     yyless(yyleng - 1);
     tok(T_ENCAPSED_AND_WHITESPACE);
   }
@@ -993,7 +994,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 }
 <ST_PHP_HEREDOC>{
   [^$\{]{ANY_CHAR}+ {
-    char* cursor = yytext;
+    char *cursor = yytext, *end = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + yyg->yy_n_chars;
 
     int indentation = 0;
 
@@ -1004,7 +1005,8 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
       yyextra->heredoc_checked_for_immediate_end = true;
     }
 
-    while(*cursor) {
+    while(cursor < end) {
+
       switch(*cursor++) {
         case '\r':
           if (*cursor == '\n') {
@@ -1016,12 +1018,12 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 
           indentation = 0;
 
-          while(*cursor && (*cursor == ' ' || *cursor == '\t')) {
+          while(cursor < end && (*cursor == ' ' || *cursor == '\t')) {
             ++cursor;
             ++indentation;
           }
 
-          if (!*cursor) {
+          if (cursor >= end) {
             goto heredoc_scan_done;
           }
 
@@ -1049,7 +1051,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
           }
           continue;
         case '\\':
-          if (*cursor && *cursor != '\n' && *cursor != '\r') {
+          if (cursor < end && *cursor != '\n' && *cursor != '\r') {
             cursor++;
           }
           continue;
@@ -1077,7 +1079,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 
 <ST_LOOKING_FOR_PROPERTY>{
   {WHITESPACE}+ {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     tok(T_WHITESPACE);
   }
   "->" tok(T_OBJECT_OPERATOR);
@@ -1156,7 +1158,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 
 <ST_XHP_CHILD>{
   [^{<]+ {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     tok_consume();
     if (!yylval->htmlTrim()) {
       YY_BREAK;
@@ -1170,7 +1172,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     tok('{');
   }
   "<" {
-    yy_scan_newlines(yytext, yyg);
+    yy_scan_newlines(yytext, yyleng, yyg);
     push_state(ST_XHP_IN_TAG);
     tok(T_XHP_TAG_LT);
   }
@@ -1203,6 +1205,16 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "-" {
     yymore();
   }
+}
+
+ /* PHP has a rule with {ANY_CHAR} emitting T_BAD_CHARACTER, but various parts
+  * of this file rely on the below behavior of emitting random characters as-is.
+  *
+  * So unless that ever gets cleaned up, emit T_BAD_CHARACTER for things that
+  * are always invalid.
+  */
+<*>[\x00-\x09\x0b\x0c\x0e-\x1f] {
+  tok(T_BAD_CHARACTER);
 }
 
  /* Other */
@@ -1332,8 +1344,9 @@ static int yy_token(int tok, yyguts_t* yyg) {
   return tok;
 }
 
-static inline void yy_scan_newlines(const char* text, struct yyguts_t* yyg) {
-  for (; *text; ++text) {
+static inline void yy_scan_newlines(const char* text, size_t len, struct yyguts_t* yyg) {
+  const char *end = text + len;
+  for (; text < end; ++text) {
     if (*text == '\r') {
       if (text[1] == '\n') {
         ++text;

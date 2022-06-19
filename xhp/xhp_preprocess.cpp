@@ -109,10 +109,10 @@ XHPResult xhp_tokenize(std::string &in, std::string &out)
   void *lex_state;
   xhp_init_lexical_state(buffer, in.size()+2, &lex_state, true);
   char *code_str;
-  size_t lineno, oldlineno=0;
+  size_t code_str_len, lineno, oldlineno=0;
 
   int tok;
-  while ((tok = xhp_lex(code_str, lineno, lex_state))) {
+  while ((tok = xhp_lex(code_str, code_str_len, lineno, lex_state))) {
     stringstream ss;
 
     if (oldlineno != lineno) {
@@ -121,8 +121,9 @@ XHPResult xhp_tokenize(std::string &in, std::string &out)
     }
 
     if (tok >= 256) {
+        string code_s(code_str, code_str_len);
         ss << "[" << tok << ":" << yytokname(tok) << "]";
-        ss << code_str;
+        ss << code_s;
     } else {
         if (tok >= 20 && tok <= 126) {
             ss << "(" << char(tok) << ")";
@@ -166,16 +167,19 @@ public:
 };
 
 int
-xhp_lex(char* &code_str, size_t &lineno, void *lex_state)
+xhp_lex(char* &code_str, size_t &code_str_len, size_t &lineno, void *lex_state)
 {
   xhp_lex_state_t *l = static_cast<xhp_lex_state_t*>(lex_state);
   if (l) {
     int tok = xhplex(&l->new_code, l->scanner);
     lineno = l->extra.first_lineno;
     if (tok) {
+      string test_code_str(l->new_code.c_str(), l->new_code.length());
       code_str = (char*)l->new_code.c_str();
+      code_str_len = l->new_code.length();
     } else {
       code_str = 0;
+      code_str_len = 0;
     }
     return tok;
   }
