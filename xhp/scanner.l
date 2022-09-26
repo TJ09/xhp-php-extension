@@ -1353,7 +1353,7 @@ static int yy_token(int tok, yyguts_t* yyg) {
 
   }
 #ifdef DEBUG
-  yy_log_token(tok, yyg);
+  yy_log_token(tok);
 #endif
   if (shouldReturnToken(tok, false)) {
     yyextra->last_token = tok;
