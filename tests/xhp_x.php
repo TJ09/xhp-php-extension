@@ -22,10 +22,10 @@ class :x {
   public function toString() {
     $head = '<'.$this->tagName;
     foreach ($this->attrs as $key => $val) {
-      $head .= ' '.htmlspecialchars($key).'="'.htmlspecialchars($val, ENT_QUOTES).'"';
+      $head .= ' '.htmlspecialchars($key, ENT_COMPAT).'="'.htmlspecialchars($val, ENT_QUOTES).'"';
     }
     return $head.'>'.implode('',
-        array_map(function($child) { return is_string($child) ? htmlspecialchars($child) : $child; }, $this->children)
+        array_map(function($child) { return is_string($child) ? htmlspecialchars($child, ENT_COMPAT) : $child; }, $this->children)
     ) . '</' . $this->tagName . '>';
   }
 
