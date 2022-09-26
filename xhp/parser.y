@@ -80,7 +80,7 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %left T_BOOLEAN_AND
 %left '|'
 %left '^'
-%left '&'
+%left T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG
 %nonassoc T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_SPACESHIP
 %nonassoc '<' T_IS_SMALLER_OR_EQUAL '>' T_IS_GREATER_OR_EQUAL
 %left '.'
@@ -166,6 +166,7 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_PRIVATE 358
 %token T_PROTECTED 359
 %token T_PUBLIC 360
+%token T_READONLY
 %token T_VAR 361
 %token T_UNSET 362
 %token T_ISSET 363
@@ -174,6 +175,7 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_CLASS 366
 %token T_TRAIT 367
 %token T_INTERFACE 368
+%token T_ENUM
 %token T_EXTENDS 369
 %token T_IMPLEMENTS 370
 %token T_NAMESPACE 371
@@ -242,7 +244,8 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_POW 304
 %token T_POW_EQUAL 282
 %token T_BAD_CHARACTER 401
-
+%token T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG 403
+%token T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG 404
 // XHP-specific tokens
 %token T_XHP_WHITESPACE 5002
 %token T_XHP_TEXT 5003
@@ -291,7 +294,12 @@ reserved_non_modifiers:
 
 semi_reserved:
   reserved_non_modifiers
-| T_STATIC | T_ABSTRACT | T_FINAL | T_PRIVATE | T_PROTECTED | T_PUBLIC
+| T_STATIC | T_ABSTRACT | T_FINAL | T_PRIVATE | T_PROTECTED | T_PUBLIC | T_READONLY
+;
+
+ampersand:
+  T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG
+| T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG
 ;
 
 identifier:
@@ -359,6 +367,7 @@ attributed_statement:
 | class_declaration_statement
 | trait_declaration_statement
 | interface_declaration_statement
+| enum_declaration_statement
 ;
 
 top_statement:
@@ -616,7 +625,7 @@ is_reference:
   %empty {
     $$ = "";
   }
-| '&'
+| T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG
 ;
 
 is_variadic:
@@ -659,6 +668,36 @@ interface_declaration_statement:
   }
 ;
 
+enum_declaration_statement:
+  T_ENUM T_STRING enum_backing_type implements_list '{' class_statement_list '}' {
+    $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7;
+  }
+;
+
+enum_backing_type:
+  %empty {
+    $$ = "";
+  }
+| ':' type_expr {
+    $$ = $1 + $2;
+  }
+;
+
+enum_case:
+  T_CASE identifier enum_case_expr ';' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+;
+
+enum_case_expr:
+  %empty {
+    $$ = "";
+  }
+| '=' expr {
+    $$ = $1 + $2;
+  }
+;
+
 extends_from:
   %empty {
     yyextra->has_parent = false;
@@ -690,7 +729,7 @@ implements_list:
 
 foreach_variable:
   variable
-| '&' variable {
+| ampersand variable {
     $$ = $1 + $2;
   }
 | T_LIST '(' array_pair_list ')' {
@@ -856,21 +895,28 @@ attributed_parameter:
 | parameter
 ;
 
-optional_visibility_modifier:
+optional_property_modifiers:
   %empty {
     $$ = "";
   }
-| T_PUBLIC
+| optional_property_modifiers property_modifier {
+    $$ = $1 + $2;
+  }
+;
+
+property_modifier:
+  T_PUBLIC
 | T_PROTECTED
 | T_PRIVATE
+| T_READONLY
 ;
 
 parameter:
-  optional_visibility_modifier optional_type_without_static
+  optional_property_modifiers optional_type_without_static
   is_reference is_variadic T_VARIABLE {
     $$ = $1 + $2 + $3 + $4 + $5;
   }
-| optional_visibility_modifier optional_type_without_static
+| optional_property_modifiers optional_type_without_static
   is_reference is_variadic T_VARIABLE '=' expr {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
   }
@@ -889,6 +935,7 @@ type_expr:
     $$ = $1 + $2;
   }
 | union_type
+| intersection_type
 ;
 
 type:
@@ -905,12 +952,22 @@ union_type:
   }
 ;
 
+intersection_type:
+  type T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG type {
+    $$ = $1 + $2 + $3;
+  }
+| intersection_type T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG type {
+    $$ = $1 + $2 + $3;
+  }
+;
+
 type_expr_without_static:
   type_without_static
 | '?' type_without_static {
     $$ = $1 + $2;
   }
 | union_type_without_static
+| intersection_type_without_static
 ;
 
 type_without_static:
@@ -924,6 +981,15 @@ union_type_without_static:
     $$ = $1 + $2 + $3;
   }
 | union_type_without_static '|' type_without_static {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+intersection_type_without_static:
+  type_without_static T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG type_without_static {
+    $$ = $1 + $2 + $3;
+  }
+| intersection_type_without_static T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG type_without_static {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -943,6 +1009,9 @@ argument_list:
   }
 | '(' non_empty_argument_list possible_comma ')' {
     $$ = $1 + $2 + $3 + $4;
+  }
+| '(' T_ELLIPSIS ')' {
+    $$ = $1 + $2 + $3;
   }
 ;
 
@@ -1011,6 +1080,7 @@ attributed_class_statement:
     yyextra->expecting_xhp_class_statements = yyextra->old_expecting_xhp_class_statements;
     $$ = $1 + $2 + " " + $4 + $5 + $6 + $7 + $8 + $9 + $10;
   }
+| enum_case
 ;
 
 class_statement:
@@ -1125,6 +1195,7 @@ member_modifier:
 | T_STATIC
 | T_ABSTRACT
 | T_FINAL
+| T_READONLY
 ;
 
 property_list:
@@ -1215,7 +1286,7 @@ expr:
 | variable '=' expr {
     $$ = $1 + $2 + $3;
   }
-| variable '=' '&' variable {
+| variable '=' ampersand variable {
     $$ = $1 + $2 + $3 + $4;
   }
 | new_expr {
@@ -1293,7 +1364,10 @@ expr:
 | expr '|' expr {
     $$ = $1 + $2 + $3;
   }
-| expr '&' expr {
+| expr T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG expr {
+    $$ = $1 + $2 + $3;
+  }
+| expr T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG expr {
     $$ = $1 + $2 + $3;
   }
 | expr '^' expr {
@@ -1466,7 +1540,7 @@ returns_ref:
   %empty {
     $$ = "";
   }
-| '&'
+| ampersand
 ;
 
 lexical_vars:
@@ -1487,7 +1561,7 @@ lexical_var_list:
 
 lexical_var:
   T_VARIABLE
-| '&' T_VARIABLE {
+| ampersand T_VARIABLE {
     $$ = $1 + $2;
   }
 ;
@@ -1731,10 +1805,10 @@ array_pair:
     $$ = $1 + $2 + $3;
   }
 | expr
-| expr T_DOUBLE_ARROW '&' variable {
+| expr T_DOUBLE_ARROW ampersand variable {
     $$ = $1 + $2 + $3 + $4;
   }
-| '&' variable {
+| ampersand variable {
     $$ = $1 + $2;
   }
 | T_ELLIPSIS expr {

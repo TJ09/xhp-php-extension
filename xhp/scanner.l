@@ -474,6 +474,11 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   private tok(T_PRIVATE);
   protected tok(T_PROTECTED);
   public tok(T_PUBLIC);
+  readonly tok(T_READONLY);
+  "readonly"[ \n\r\t]*"(" {
+    yyless(strlen("readonly"));
+    tok(T_STRING);
+  }
   var tok(T_VAR);
   unset tok(T_UNSET);
   isset tok(T_ISSET);
@@ -481,6 +486,14 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   __halt_compiler tok(T_HALT_COMPILER);
   class tok(T_CLASS);
   interface tok(T_INTERFACE);
+  "enum"{WHITESPACE}("extends"|"implements") {
+    yyless(4);
+    tok(T_STRING);
+  }
+  "enum"{WHITESPACE}[a-zA-Z_\x80-\xff] {
+    yyless(4);
+    tok(T_ENUM);
+  }
   extends tok(T_EXTENDS);
   implements tok(T_IMPLEMENTS);
   list tok(T_LIST);
@@ -851,6 +864,15 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
 <ST_LT_CHECK>"<" {
   BEGIN(ST_PHP);
   tok('<');
+}
+
+<ST_PHP,ST_PHP_NO_RESERVED_WORDS>"&"[ \t\r\n]*("$"|"...") {
+  yyless(1);
+  tok(T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG);
+}
+
+<ST_PHP,ST_PHP_NO_RESERVED_WORDS>"&" {
+  tok(T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG);
 }
 
 <ST_DOUBLE_QUOTES,ST_BACKQUOTE,ST_PHP_HEREDOC>{
