@@ -154,12 +154,12 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type) {
     CG(in_compilation) = true;
     CG(zend_lineno) = error_lineno;
 #if PHP_VERSION_ID >= 80100
-    zend_string *str = zend_string_init(ZSTR_VAL(f->filename), ZSTR_LEN(f->filename), 0);
+    zend_set_compiled_filename(f->filename);
 #else
     zend_string *str = zend_string_init(f->filename, strlen(f->filename), 0);
-#endif
     zend_set_compiled_filename(str);
     zend_string_release(str);
+#endif
 
     zend_error(E_PARSE, "%s", error_str.c_str());
     zend_bailout();
@@ -175,8 +175,10 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type) {
 
   fake_file.type = ZEND_HANDLE_FILENAME;
   fake_file.opened_path = f->opened_path ? zend_string_copy(f->opened_path) : NULL;
+#if PHP_VERSION_ID >= 80100
+  fake_file.filename = zend_string_copy(f->filename);
+#else
   fake_file.filename = f->filename;
-#if PHP_VERSION_ID < 80100
   fake_file.free_filename = false;
 #endif
 
