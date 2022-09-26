@@ -71,11 +71,7 @@ static int zend_stream_getc(zend_file_handle *file_handle) {
 }
 
 static size_t zend_stream_read(zend_file_handle *file_handle, char *buf, size_t len) {
-#if PHP_VERSION_ID >= 70400
   if (file_handle->handle.stream.isatty) {
-#else
-  if (file_handle->type != ZEND_HANDLE_MAPPED && file_handle->handle.stream.isatty) {
-#endif
     int c = '*';
     size_t n;
 
@@ -114,34 +110,22 @@ long xhp_stream_fteller(xhp_stream_t* handle) {
 //
 // PHP compilation intercepter
 static zend_op_array* xhp_compile_file(zend_file_handle* f, int type) {
-#if PHP_VERSION_ID >= 70400
   // open_file_for_scanning will reset this value, so we need to preserve its
   // initial state and restore it later.
   zend_bool skip_shebang_tmp = CG(skip_shebang);
-#endif
 
   if (!f || open_file_for_scanning(f) == FAILURE) {
-#if PHP_VERSION_ID >= 70400
     CG(skip_shebang) = skip_shebang_tmp;
-#endif
     // If opening the file fails just send it to the original func
     return dist_compile_file(f, type);
   }
-#if PHP_VERSION_ID >= 70400
   CG(skip_shebang) = skip_shebang_tmp;
-#endif
 
   // Grab code from zend file handle
   string original_code;
-#if PHP_VERSION_ID >= 70400
   if (f->buf) {
     original_code = f->buf;
   }
-#else
-  if (f->type == ZEND_HANDLE_MAPPED) {
-    original_code = f->handle.stream.mmap.buf;
-  }
-#endif
   else {
     // Read full program from zend stream
     char read_buf[4096];
@@ -184,25 +168,14 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type) {
   zend_file_handle fake_file;
   memset(&fake_file, 0, sizeof(zend_file_handle));
 
-#if PHP_VERSION_ID >= 70400
   fake_file.type = ZEND_HANDLE_FILENAME;
-#else
-  fake_file.type = ZEND_HANDLE_MAPPED;
-#endif
-
   fake_file.opened_path = f->opened_path ? zend_string_copy(f->opened_path) : NULL;
   fake_file.filename = f->filename;
   fake_file.free_filename = false;
 
   fake_file.handle.stream.isatty = 0;
-#if PHP_VERSION_ID >= 70400
   fake_file.buf = estrdup(const_cast<char*>(code_to_give_to_php->c_str()));
   fake_file.len = code_to_give_to_php->size();
-#else
-  fake_file.handle.stream.mmap.pos = 0;
-  fake_file.handle.stream.mmap.buf = const_cast<char*>(code_to_give_to_php->c_str());
-  fake_file.handle.stream.mmap.len = code_to_give_to_php->size();
-#endif
   fake_file.handle.stream.closer = NULL;
 
   // TODO: should check for bailout
