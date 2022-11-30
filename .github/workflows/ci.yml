@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["7.4", "8.0", "8.1"]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install build dependencies
+        run: sudo apt-get install -y build-essential flex bison re2c
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Compile
+        run: phpize && ./configure && make
+
+      - name: Test
+        run: make test
