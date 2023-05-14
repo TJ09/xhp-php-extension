@@ -32,7 +32,9 @@ using namespace std;
 //
 // Decls
 typedef zend_op_array* (zend_compile_file_t)(zend_file_handle*, int);
-#if PHP_VERSION_ID >= 80000
+#if PHP_VERSION_ID >= 80200
+typedef zend_op_array* (zend_compile_string_t)(zend_string*, const char*, zend_compile_position position);
+#elif PHP_VERSION_ID >= 80000
 typedef zend_op_array* (zend_compile_string_t)(zend_string*, const char*);
 #else
 typedef zend_op_array* (zend_compile_string_t)(zval*, char*);
@@ -195,7 +197,9 @@ static zend_op_array* xhp_compile_file(zend_file_handle* f, int type) {
   return ret;
 }
 
-#if PHP_VERSION_ID >= 80000
+#if PHP_VERSION_ID >= 80200
+static zend_op_array* xhp_compile_string(zend_string* str, const char *filename, zend_compile_position position) {
+#elif PHP_VERSION_ID >= 80000
 static zend_op_array* xhp_compile_string(zend_string* str, const char *filename) {
 #else
 static zend_op_array* xhp_compile_string(zval* str, char *filename) {
@@ -251,7 +255,11 @@ static zend_op_array* xhp_compile_string(zval* str, char *filename) {
     return NULL;
   } else if (result == XHPRewrote) {
     // Create another tmp zval with the rewritten PHP code and pass it to the original function
-#if PHP_VERSION_ID >= 80000
+#if PHP_VERSION_ID >= 80200
+    rewritten_code_str = zend_string_init(rewrit.c_str(), rewrit.size(), 0);
+    zend_op_array* ret = dist_compile_string(rewritten_code_str, filename, position);
+    zend_string_release(rewritten_code_str);
+#elif PHP_VERSION_ID >= 80000
     rewritten_code_str = zend_string_init(rewrit.c_str(), rewrit.size(), 0);
     zend_op_array* ret = dist_compile_string(rewritten_code_str, filename);
     zend_string_release(rewritten_code_str);
@@ -262,7 +270,11 @@ static zend_op_array* xhp_compile_string(zval* str, char *filename) {
 #endif
     return ret;
   } else {
+#if PHP_VERSION_ID >= 80200
+    return dist_compile_string(str, filename, position);
+#else
     return dist_compile_string(str, filename);
+#endif
   }
 }
 

@@ -3,6 +3,8 @@
 // unit tests.
 class :x {
 
+  protected $attrs;
+  protected $children;
   protected $tagName;
 
   public function __construct($attrs, $children) {

@@ -4,6 +4,9 @@ XHP ->: Syntax
 <?php
 
 class :thing {
+  protected $attributes;
+  public $prop;
+
   public function __construct($attributes) {
     $this->attributes = $attributes;
   }
