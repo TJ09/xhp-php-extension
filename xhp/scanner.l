@@ -475,10 +475,6 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   protected tok(T_PROTECTED);
   public tok(T_PUBLIC);
   readonly tok(T_READONLY);
-  "readonly"[ \n\r\t]*"(" {
-    yyless(strlen("readonly"));
-    tok(T_STRING);
-  }
   var tok(T_VAR);
   unset tok(T_UNSET);
   isset tok(T_ISSET);

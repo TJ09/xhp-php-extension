@@ -615,8 +615,13 @@ unset_variable:
   variable
 ;
 
+function_name:
+  T_STRING
+| T_READONLY
+;
+
 function_declaration_statement:
-  function returns_ref T_STRING '(' parameter_list ')' return_type '{' inner_statement_list '}' {
+  function returns_ref function_name '(' parameter_list ')' return_type '{' inner_statement_list '}' {
     $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10;
   }
 ;
@@ -654,6 +659,7 @@ class_modifiers:
 class_modifier:
   T_ABSTRACT
 | T_FINAL
+| T_READONLY
 ;
 
 trait_declaration_statement:
@@ -943,11 +949,18 @@ type:
 | T_STATIC
 ;
 
-union_type:
-  type '|' type {
+union_type_element:
+  type
+| '(' intersection_type ')' {
     $$ = $1 + $2 + $3;
   }
-| union_type '|' type  {
+;
+
+union_type:
+  union_type_element '|' union_type_element {
+    $$ = $1 + $2 + $3;
+  }
+| union_type '|' union_type_element {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -976,11 +989,18 @@ type_without_static:
 | name
 ;
 
-union_type_without_static:
-  type_without_static '|' type_without_static {
+union_type_without_static_element:
+  type_without_static
+| '(' intersection_type_without_static ')' {
     $$ = $1 + $2 + $3;
   }
-| union_type_without_static '|' type_without_static {
+;
+
+union_type_without_static:
+  union_type_without_static_element '|' union_type_without_static_element {
+    $$ = $1 + $2 + $3;
+  }
+| union_type_without_static '|' union_type_without_static_element {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -1568,6 +1588,9 @@ lexical_var:
 
 function_call:
   name argument_list {
+    $$ = $1 + $2;
+  }
+| T_READONLY argument_list {
     $$ = $1 + $2;
   }
 | class_name T_PAAMAYIM_NEKUDOTAYIM member_name argument_list {
