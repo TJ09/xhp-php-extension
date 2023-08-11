@@ -345,7 +345,7 @@ attribute_decl:
 attribute_group:
   attribute_decl
 | attribute_group ',' attribute_decl {
-    $1 + $2 + $3;
+    $$ = $1 + $2 + $3;
   }
 ;
 
