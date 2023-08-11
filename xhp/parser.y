@@ -373,7 +373,9 @@ attributed_statement:
 top_statement:
   statement
 | attributed_statement
-| attributes attributed_statement
+| attributes attributed_statement  {
+    $$ = $1 + $2;
+  }
 | T_HALT_COMPILER '(' ')' ';' {
     $$ = $1 + $2 + $3 + $4;
   }
