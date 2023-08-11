@@ -333,6 +333,11 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
     // the state transition will be done in yy_token()
     tok(T_OPEN_TAG);
   }
+  "<?php"[ \t]"// xhp" {
+    yyless(yyleng - 6);
+    yyextra->used = true;
+    tok(T_OPEN_TAG);
+  }
   "<?" {
     if (yyextra->short_tags) {
       tok(T_OPEN_TAG);
