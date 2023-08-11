@@ -908,7 +908,7 @@ optional_property_modifiers:
     $$ = "";
   }
 | optional_property_modifiers property_modifier {
-    $$ = $1 + $2;
+    $$ = $1 + $2 + " ";
   }
 ;
 
