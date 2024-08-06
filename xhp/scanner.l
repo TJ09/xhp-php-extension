@@ -1338,14 +1338,6 @@ static int yy_token(int tok, yyguts_t* yyg) {
       push_state(INITIAL);
       break;
 
-    // In PHP it's ok to use keywords such as 'if' as field names
-    // or function names.
-    case T_PAAMAYIM_NEKUDOTAYIM:
-    case T_FUNCTION:
-    case T_CLASS:
-      push_state(ST_PHP_NO_RESERVED_WORDS);
-      break;
-
     case T_XHP_LABEL:
       if (yyextra->return_all_tokens) {
         yylval->prepend(":");
