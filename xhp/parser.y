@@ -1311,9 +1311,6 @@ expr:
 | variable '=' ampersand variable {
     $$ = $1 + $2 + $3 + $4;
   }
-| new_expr {
-    $$ = $1;
-  }
 | T_CLONE expr {
     $$ = $1 + " " + $2;
   }
@@ -1466,6 +1463,9 @@ expr:
   }
 | '(' expr ')' {
     $$ = $1 + $2 + $3;
+  }
+| new_expr {
+    $$ = $1;
   }
 | expr '?' expr ':' expr {
     $$ = $1 + $2 + $3 + $4 + $5;
