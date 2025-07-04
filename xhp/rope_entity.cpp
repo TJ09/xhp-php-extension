@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <iostream>
 #include <algorithm>
 #include <string>
@@ -2112,3 +2113,4 @@ void code_rope::xhpDecode() {
   }
 
 }
+
