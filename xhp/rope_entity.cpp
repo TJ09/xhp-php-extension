@@ -2007,7 +2007,6 @@ struct IsStartEntity
 struct IsNamedEntity
 {
   bool operator()(int ch) {
-    std::string::size_type n;
     if (ch >= '0' && ch <= '9') return false;
     if (ch >= 'a' && ch <= 'z') return false;
     if (ch >= 'A' && ch <= 'Z') return false;
@@ -2018,7 +2017,6 @@ struct IsNamedEntity
 struct IsHexEntity
 {
   bool operator()(int ch) {
-    std::string::size_type n;
     if (ch >= '0' && ch <= '9') return false;
     if (ch >= 'a' && ch <= 'f') return false;
     if (ch >= 'A' && ch <= 'F') return false;
@@ -2029,7 +2027,6 @@ struct IsHexEntity
 struct IsDecEntity
 {
   bool operator()(int ch) {
-    std::string::size_type n;
     if (ch >= '0' && ch <= '9') return false;
     return true;
   }
