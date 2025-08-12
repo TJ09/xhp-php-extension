@@ -1,6 +1,6 @@
 <?php
 
-$parser = file_get_contents('xhp/parser.y');
+$orig_parser = $parser = file_get_contents('xhp/parser.y');
 
 foreach(get_defined_constants(true)['tokenizer'] as $token => $value) {
 	if (!str_starts_with($token, 'T_')) {
@@ -13,4 +13,6 @@ foreach(get_defined_constants(true)['tokenizer'] as $token => $value) {
 	);
 }
 
-file_put_contents('xhp/parser.y', $parser);
+if ($orig_parser !== $parser) {
+	file_put_contents('xhp/parser.y', $parser);
+}
