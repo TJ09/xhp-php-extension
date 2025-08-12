@@ -14,11 +14,7 @@ class :x {
   }
 
   final public function __toString() {
-    try {
-      return $this->toString();
-    } catch (\Exception $error) {
-      trigger_error($error->getMessage(), E_USER_ERROR);
-    }
+    return $this->toString();
   }
 
   public function toString() {

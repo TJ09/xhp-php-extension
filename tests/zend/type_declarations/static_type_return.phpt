@@ -2,7 +2,7 @@
 [Zend] Static return type
 --SKIPIF--
 <?php
-if (version_compare(PHP_VERSION, '8.0', '<')) exit("Skip This test is for PHP 8.0+ only.");
+if (version_compare(PHP_VERSION, '8.4', '<')) exit("Skip This test relies on PHP 8.4's closure string format");
 ?>
 --FILE--
 <?php // xhp
@@ -71,7 +71,7 @@ $test = $test->bindTo($a);
 var_dump($test($a));
 
 ?>
---EXPECT--
+--EXPECTF--
 object(A)#3 (0) {
 }
 object(B)#3 (0) {
@@ -90,6 +90,6 @@ object(A)#3 (0) {
 }
 A::test4(): Return value must be of type B|array, A returned
 
-{closure}(): Return value must be of type static, stdClass returned
+{closure:%s:%d}(): Return value must be of type static, stdClass returned
 object(A)#1 (0) {
 }
