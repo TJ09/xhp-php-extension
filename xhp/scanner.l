@@ -479,6 +479,9 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   private tok(T_PRIVATE);
   protected tok(T_PROTECTED);
   public tok(T_PUBLIC);
+  "private(set)" tok(T_PRIVATE_SET);
+  "protected(set)" tok(T_PROTECTED_SET);
+  "public(set)" tok(T_PUBLIC_SET);
   readonly tok(T_READONLY);
   var tok(T_VAR);
   unset tok(T_UNSET);
@@ -503,6 +506,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   __class__ tok(T_CLASS_C);
   __method__ tok(T_METHOD_C);
   __function__ tok(T_FUNC_C);
+  __property__ tok(T_PROPERTY_C);
   __line__ tok(T_LINE);
   __file__ tok(T_FILE);
   __trait__ tok(T_TRAIT_C);

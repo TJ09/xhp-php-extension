@@ -166,6 +166,9 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_PRIVATE 324
 %token T_PROTECTED 325
 %token T_PUBLIC 326
+%token T_PRIVATE_SET 327
+%token T_PROTECTED_SET 328
+%token T_PUBLIC_SET 329
 %token T_READONLY 330
 %token T_VAR 331
 %token T_UNSET 332
@@ -189,6 +192,7 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_TRAIT_C 350
 %token T_METHOD_C 351
 %token T_FUNC_C 352
+%token T_PROPERTY_C 353
 %token T_NS_C 354
 
 %token T_ATTRIBUTE 355
@@ -290,7 +294,7 @@ reserved_non_modifiers:
 | T_THROW | T_USE | T_INSTEADOF | T_GLOBAL | T_VAR | T_UNSET | T_ISSET | T_EMPTY | T_CONTINUE | T_GOTO
 | T_FUNCTION | T_CONST | T_RETURN | T_PRINT | T_YIELD | T_LIST | T_SWITCH | T_ENDSWITCH | T_CASE | T_DEFAULT | T_BREAK
 | T_ARRAY | T_CALLABLE | T_EXTENDS | T_IMPLEMENTS | T_NAMESPACE | T_TRAIT | T_INTERFACE | T_CLASS
-| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C | T_FN | T_MATCH
+| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C | T_FN | T_MATCH | T_ENUM | T_PROPERTY_C
 ;
 
 semi_reserved:
@@ -659,6 +663,20 @@ class_modifiers:
   }
 ;
 
+anonymous_class_modifiers:
+  class_modifier
+| anonymous_class_modifiers class_modifier {
+    $$ = $1 + " " + $2;
+  }
+;
+
+anonymous_class_modifiers_optional:
+  %empty {
+    $$ = "";
+  }
+| anonymous_class_modifiers
+;
+
 class_modifier:
   T_ABSTRACT
 | T_FINAL
@@ -904,30 +922,23 @@ attributed_parameter:
 | parameter
 ;
 
-optional_property_modifiers:
+optional_cpp_modifiers:
   %empty {
     $$ = "";
   }
-| optional_property_modifiers property_modifier {
-    $$ = $1 + $2 + " ";
+| non_empty_member_modifiers {
+    $$ = $1 + " ";
   }
-;
-
-property_modifier:
-  T_PUBLIC
-| T_PROTECTED
-| T_PRIVATE
-| T_READONLY
 ;
 
 parameter:
-  optional_property_modifiers optional_type_without_static
-  is_reference is_variadic T_VARIABLE {
-    $$ = $1 + $2 + $3 + $4 + $5;
+  optional_cpp_modifiers optional_type_without_static
+  is_reference is_variadic T_VARIABLE optional_property_hook_list {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
   }
-| optional_property_modifiers optional_type_without_static
-  is_reference is_variadic T_VARIABLE '=' expr {
-    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7;
+| optional_cpp_modifiers optional_type_without_static
+  is_reference is_variadic T_VARIABLE '=' expr optional_property_hook_list {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + $8;
   }
 ;
 
@@ -1090,10 +1101,13 @@ class_statement_list:
 ;
 
 attributed_class_statement:
-  variable_modifiers optional_type_without_static property_list ';' {
+  property_modifiers optional_type_without_static property_list ';' {
     $$ = $1 + " " + $2 + $3 + $4;
   }
-| method_modifiers T_CONST class_const_list ';' {
+| property_modifiers optional_type_without_static hooked_property {
+    $$ = $1 + " " + $2 + $3;
+  }
+| class_const_modifiers T_CONST class_const_list ';' {
     $$ = $1 + $2 + " " + $3 + $4;
   }
 | method_modifiers function {
@@ -1188,14 +1202,25 @@ method_body:
   }
 ;
 
-variable_modifiers:
-  non_empty_member_modifiers
+property_modifiers:
+  non_empty_member_modifiers {
+    $$ = $1 + " ";
+  }
 | T_VAR {
     $$ = $1 + " ";
   }
 ;
 
 method_modifiers:
+  %empty {
+    $$ = "";
+  }
+| non_empty_member_modifiers {
+    $$ = $1 + " ";
+  }
+;
+
+class_const_modifiers:
   %empty {
     $$ = "";
   }
@@ -1215,6 +1240,9 @@ member_modifier:
   T_PUBLIC
 | T_PROTECTED
 | T_PRIVATE
+| T_PUBLIC_SET
+| T_PROTECTED_SET
+| T_PRIVATE_SET
 | T_STATIC
 | T_ABSTRACT
 | T_FINAL
@@ -1231,6 +1259,71 @@ property_list:
 property:
   T_VARIABLE
 | T_VARIABLE '=' expr {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+hooked_property:
+  T_VARIABLE '{' property_hook_list '}' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| T_VARIABLE '=' expr '{' property_hook_list '}' {
+    $$ = $1 + $2 + $3 + $4 + $5 + $6;
+  }
+;
+
+property_hook_list:
+  %empty {
+    $$ = "";
+  }
+| property_hook_list property_hook {
+    $$ = $1 + $2;
+  }
+| property_hook_list attributes property_hook {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+optional_property_hook_list:
+  %empty {
+    $$ = "";
+  }
+| '{' property_hook_list '}' {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+property_hook_modifiers:
+  %empty {
+    $$ = "";
+  }
+| non_empty_member_modifiers {
+    $$ = $1 + " ";
+  }
+;
+
+property_hook:
+  property_hook_modifiers returns_ref T_STRING
+  optional_parameter_list property_hook_body {
+    $$ = $1 + $2 + $3 + $4 + $5;
+  }
+;
+
+property_hook_body:
+  ';'
+| '{' inner_statement_list '}' {
+    $$ = $1 + $2 + $3;
+  }
+| T_DOUBLE_ARROW expr ';' {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+optional_parameter_list:
+  %empty {
+    $$ = "";
+  }
+| '(' parameter_list ')' {
     $$ = $1 + $2 + $3;
   }
 ;
@@ -1281,13 +1374,13 @@ non_empty_for_expr:
 ;
 
 anonymous_class:
-  T_CLASS ctor_arguments extends_from implements_list '{' class_statement_list '}' {
-    $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7;
+  anonymous_class_modifiers_optional T_CLASS ctor_arguments extends_from implements_list '{' class_statement_list '}' {
+    $$ = $1 + $2 + " " + $3 + $4 + $5 + $6 + $6 + $8;
   }
 ;
 
-new_expr:
-  T_NEW class_name_reference ctor_arguments {
+new_dereferenceable:
+  T_NEW class_name_reference argument_list {
     $$ = $1 + " " + $2 + $3;
   }
 | T_NEW anonymous_class {
@@ -1295,6 +1388,12 @@ new_expr:
   }
 | T_NEW attributes anonymous_class {
     $$ = $1 + " " + $2 + $3;
+  }
+;
+
+new_non_dereferenceable:
+  T_NEW class_name_reference {
+    $$ = $1 + " " + $2;
   }
 ;
 
@@ -1465,7 +1564,10 @@ expr:
 | '(' expr ')' {
     $$ = $1 + $2 + $3;
   }
-| new_expr {
+| new_dereferenceable {
+    $$ = $1;
+  }
+| new_non_dereferenceable {
     $$ = $1;
   }
 | expr '?' expr ':' expr {
@@ -1499,7 +1601,7 @@ expr:
 | T_UNSET_CAST expr {
     $$ = $1 + $2;
   }
-| T_EXIT exit_expr {
+| T_EXIT ctor_arguments {
     $$ = $1 + $2;
   }
 | '@' expr {
@@ -1620,15 +1722,6 @@ class_name_reference:
   }
 ;
 
-exit_expr:
-  %empty {
-    $$ = "";
-  }
-| '(' optional_expr')' {
-    $$ = $1 + $2 + $3;
-  }
-;
-
 backticks_expr:
   %empty {
     $$ = "";
@@ -1680,6 +1773,7 @@ constant:
 | T_TRAIT_C
 | T_METHOD_C
 | T_FUNC_C
+| T_PROPERTY_C
 | T_NS_C
 | T_CLASS_C
 ;
@@ -1690,6 +1784,12 @@ class_constant:
   }
 | variable_class_name T_PAAMAYIM_NEKUDOTAYIM identifier {
     $$ = $1 + $2 + $3;
+  }
+| class_name T_PAAMAYIM_NEKUDOTAYIM '{' expr '}' {
+    $$ = $1 + $2 + $3 + $4 + $5;
+  }
+| variable_class_name T_PAAMAYIM_NEKUDOTAYIM '{' expr '}' {
+    $$ = $1 + $2 + $3 + $4 + $5;
   }
 ;
 
@@ -1711,6 +1811,7 @@ fully_dereferenceable:
   }
 | dereferenceable_scalar
 | class_constant
+| new_dereferenceable
 ;
 
 array_object_dereferenceable:
@@ -1724,15 +1825,13 @@ callable_expr:
     $$ = $1 + $2 + $3;
   }
 | dereferenceable_scalar
+| new_dereferenceable
 ;
 
 callable_variable:
   simple_variable
 | array_object_dereferenceable '[' optional_expr ']' {
     $$ = $1 + $2 + $3 + $4;
-  }
-| array_object_dereferenceable '{' expr '}' {
-    $$ = $1 + $2 + $3;
   }
 | array_object_dereferenceable T_OBJECT_OPERATOR property_name argument_list {
     $$ = $1 + $2 + $3 + $4;
@@ -1776,9 +1875,6 @@ static_member:
 new_variable:
   simple_variable
 | new_variable '[' optional_expr ']' {
-    $$ = $1 + $2 + $3 + $4;
-  }
-| new_variable '{' expr '}' {
     $$ = $1 + $2 + $3 + $4;
   }
 | new_variable T_OBJECT_OPERATOR property_name {
@@ -2022,6 +2118,7 @@ xhp_bareword:
   | T_CLASS_C
   | T_FUNC_C
   | T_METHOD_C
+  | T_PROPERTY_C
   | T_LINE
   | T_FILE
   | T_DIR
