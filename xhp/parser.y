@@ -1375,7 +1375,7 @@ non_empty_for_expr:
 
 anonymous_class:
   anonymous_class_modifiers_optional T_CLASS ctor_arguments extends_from implements_list '{' class_statement_list '}' {
-    $$ = $1 + $2 + " " + $3 + $4 + $5 + $6 + $6 + $8;
+    $$ = $1 + $2 + " " + $3 + $4 + $5 + $6 + $7 + $8;
   }
 ;
 
