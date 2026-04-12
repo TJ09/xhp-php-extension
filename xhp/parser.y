@@ -1616,13 +1616,13 @@ expr:
   }
 | T_YIELD
 | T_YIELD expr {
-    $$ = $1 + $2;
+    $$ = $1 + " " + $2;
   }
 | T_YIELD expr T_DOUBLE_ARROW expr {
-    $$ = $1 + $2 + $3;
+    $$ = $1 + " " + $2 + $3;
   }
 | T_YIELD_FROM expr {
-    $$ = $1 + $2;
+    $$ = $1 + " " + $2;
   }
 | T_THROW expr {
     $$ = $1 + " " + $2;
