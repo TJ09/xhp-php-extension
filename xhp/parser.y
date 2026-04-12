@@ -83,13 +83,14 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %left T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG
 %nonassoc T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_SPACESHIP
 %nonassoc '<' T_IS_SMALLER_OR_EQUAL '>' T_IS_GREATER_OR_EQUAL
+%left T_PIPE
 %left '.'
 %left T_SL T_SR
 %left '+' '-'
 %left '*' '/' '%'
 %precedence '!'
 %precedence T_INSTANCEOF
-%precedence '~' T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST '@'
+%precedence '~' T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST T_VOID_CAST '@'
 %right T_POW
 %precedence T_CLONE
 
@@ -228,28 +229,30 @@ static void replacestr(string &source, const string &find, const string &rep) {
 %token T_OBJECT_CAST 385
 %token T_BOOL_CAST 386
 %token T_UNSET_CAST 387
-%token T_OBJECT_OPERATOR 388
-%token T_NULLSAFE_OBJECT_OPERATOR 389
-%token T_DOUBLE_ARROW 390
-%token T_COMMENT 391
-%token T_DOC_COMMENT 392
-%token T_OPEN_TAG 393
-%token T_OPEN_TAG_WITH_ECHO 394
-%token T_CLOSE_TAG 395
-%token T_WHITESPACE 396
-%token T_START_HEREDOC 397
-%token T_END_HEREDOC 398
-%token T_DOLLAR_OPEN_CURLY_BRACES 399
-%token T_CURLY_OPEN 400
-%token T_PAAMAYIM_NEKUDOTAYIM 401
-%token T_NS_SEPARATOR 402
-%token T_ELLIPSIS 403
-%token T_COALESCE 404
-%token T_POW 405
-%token T_POW_EQUAL 406
-%token T_BAD_CHARACTER 409
-%token T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG 407
-%token T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG 408
+%token T_VOID_CAST 388
+%token T_OBJECT_OPERATOR 389
+%token T_NULLSAFE_OBJECT_OPERATOR 390
+%token T_DOUBLE_ARROW 391
+%token T_COMMENT 392
+%token T_DOC_COMMENT 393
+%token T_OPEN_TAG 394
+%token T_OPEN_TAG_WITH_ECHO 395
+%token T_CLOSE_TAG 396
+%token T_WHITESPACE 397
+%token T_START_HEREDOC 398
+%token T_END_HEREDOC 399
+%token T_DOLLAR_OPEN_CURLY_BRACES 400
+%token T_CURLY_OPEN 401
+%token T_PAAMAYIM_NEKUDOTAYIM 402
+%token T_NS_SEPARATOR 403
+%token T_ELLIPSIS 404
+%token T_COALESCE 405
+%token T_POW 406
+%token T_POW_EQUAL 407
+%token T_PIPE 408
+%token T_BAD_CHARACTER 411
+%token T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG 409
+%token T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG 410
 
 // XHP-specific tokens
 %token T_XHP_WHITESPACE 5002
@@ -375,10 +378,17 @@ attributed_statement:
 | enum_declaration_statement
 ;
 
+attributed_top_statement:
+  attributed_statement
+| T_CONST const_list ';' {
+    $$ = $1 + " " + $2 + $3;
+  }
+;
+
 top_statement:
   statement
-| attributed_statement
-| attributes attributed_statement  {
+| attributed_top_statement
+| attributes attributed_top_statement  {
     $$ = $1 + $2;
   }
 | T_HALT_COMPILER '(' ')' ';' {
@@ -404,9 +414,6 @@ top_statement:
   }
 | T_USE use_type use_declarations ';' {
     $$ = $1 + " " + $2 + " " + $3 + $4;
-  }
-| T_CONST const_list ';' {
-    $$ = $1 + " " + $2 + $3;
   }
 ;
 
@@ -530,7 +537,7 @@ unticked_statement:
 | T_DO statement T_WHILE '(' expr ')' ';' {
     $$ = $1 + " " + $2 + $3 + $4 + $5 + $6 + $7;
   }
-| T_FOR '(' for_expr ';' for_expr ';' for_expr ')' for_statement {
+| T_FOR '(' for_exprs ';' for_cond_exprs ';' for_exprs ')' for_statement {
     $$ = $1 + $2 + $3 + $4 + $5 + $6 + $7 + $8 + $9;
   }
 | T_SWITCH '(' expr ')' switch_case_list {
@@ -576,6 +583,9 @@ unticked_statement:
   }
 | T_GOTO T_STRING ';' {
     $$ = $1 + " " + $2 + $3;
+  }
+| T_VOID_CAST expr ';' {
+    $$ = $1 + $2 + $3;
   }
 ;
 
@@ -807,17 +817,18 @@ case_list:
   %empty {
     $$ = "";
   }
-| case_list T_CASE expr case_separator inner_statement_list {
+| case_list T_CASE expr ':' inner_statement_list {
     $$ = $1 + $2 + " " + $3 + $4 + $5;
   }
-| case_list T_DEFAULT case_separator inner_statement_list {
+| case_list T_CASE expr ';' inner_statement_list {
+    $$ = $1 + $2 + " " + $3 + $4 + $5;
+  }
+| case_list T_DEFAULT ':' inner_statement_list {
     $$ = $1 + $2 + $3 + $4;
   }
-;
-
-case_separator:
-  ':'
-| ';'
+| case_list T_DEFAULT ';' inner_statement_list {
+    $$ = $1 + $2 + $3 + $4;
+  }
 ;
 
 match:
@@ -1056,14 +1067,43 @@ non_empty_argument_list:
   }
 ;
 
-argument:
-  expr
-| identifier ':' expr {
+clone_argument_list:
+  '(' ')' {
+    $$ = $1 + $2;
+  }
+| '(' non_empty_clone_argument_list possible_comma ')' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| '(' expr ',' ')' {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| '(' T_ELLIPSIS ')' {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+non_empty_clone_argument_list:
+  expr ',' argument {
+    $$ = $1 + $2 + $3;
+  }
+|	argument_no_expr
+|	non_empty_clone_argument_list ',' argument {
+    $$ = $1 + $2 + $3;
+  }
+;
+
+argument_no_expr:
+  identifier ':' expr {
     $$ = $1 + $2 + $3;
   }
 | T_ELLIPSIS expr {
     $$ = $1 + $2;
   }
+;
+
+argument:
+    expr
+  | argument_no_expr
 ;
 
 global_var_list:
@@ -1358,17 +1398,32 @@ echo_expr:
   expr
 ;
 
-for_expr:
+for_cond_exprs:
   %empty {
     $$ = "";
   }
-| non_empty_for_expr
+| non_empty_for_exprs ',' expr {
+    $$ = $1 + $2 + $3;
+  }
+| expr
+
+for_exprs:
+  %empty {
+    $$ = "";
+  }
+| non_empty_for_exprs
 ;
 
 
-non_empty_for_expr:
-  non_empty_for_expr ',' expr {
+non_empty_for_exprs:
+  non_empty_for_exprs ',' expr {
     $$ = $1 + $2 + $3;
+  }
+| non_empty_for_exprs ',' T_VOID_CAST expr {
+    $$ = $1 + $2 + $3 + $4;
+  }
+| T_VOID_CAST expr {
+    $$ = $1 + $2;
   }
 | expr
 ;
@@ -1410,6 +1465,9 @@ expr:
   }
 | variable '=' ampersand variable {
     $$ = $1 + $2 + $3 + $4;
+  }
+| T_CLONE clone_argument_list {
+    $$ = $1 + $2;
   }
 | T_CLONE expr {
     $$ = $1 + " " + $2;
@@ -1541,6 +1599,9 @@ expr:
     $$ = $1 + $2 + $3;
   }
 | expr T_IS_NOT_EQUAL expr {
+    $$ = $1 + $2 + $3;
+  }
+| expr T_PIPE expr {
     $$ = $1 + $2 + $3;
   }
 | expr '<' expr {

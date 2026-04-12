@@ -127,6 +127,7 @@ static int getNextTokenType(int t) {
     case T_CLONE:
     case T_EXIT:
     case T_RETURN:
+    case T_PIPE:
     case T_YIELD:
     case T_YIELD_FROM:
     case T_NEW:
@@ -141,6 +142,7 @@ static int getNextTokenType(int t) {
     case T_OBJECT_CAST:
     case T_BOOL_CAST:
     case T_UNSET_CAST:
+    case T_VOID_CAST:
     case T_UNRESOLVED_LT:
     case T_AS:
       return NextTokenType::XhpTag |
@@ -563,6 +565,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "<<=" tok(T_SL_EQUAL);
   ">>=" tok(T_SR_EQUAL);
   "??=" tok(T_COALESCE_EQUAL);
+  "|>" tok(T_PIPE);
   "||" tok(T_BOOLEAN_OR);
   "&&" tok(T_BOOLEAN_AND);
   "==" tok(T_IS_EQUAL);
@@ -616,6 +619,7 @@ BACKQUOTE_CHARS     ("{"*([^$`\\{]|("\\"{ANY_CHAR}))|{BACKQUOTE_LITERAL_DOLLAR})
   "("{TABS_AND_SPACES}object{TABS_AND_SPACES}")" tok(T_OBJECT_CAST);
   "("{TABS_AND_SPACES}(bool|boolean){TABS_AND_SPACES}")" tok(T_BOOL_CAST);
   "("{TABS_AND_SPACES}unset{TABS_AND_SPACES}")" tok(T_UNSET_CAST);
+  "("{TABS_AND_SPACES}void{TABS_AND_SPACES}")" tok(T_VOID_CAST);
 }
 
  /* Numbers */

@@ -1,5 +1,7 @@
 --TEST--
 Stack trace should give correct source
+--INI--
+opcache.enable=0
 --FILE--
 <?php // xhp
 
