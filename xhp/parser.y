@@ -1372,7 +1372,19 @@ class_const_list:
   class_const_list ',' class_const_decl {
     $$ = $1 + $2 + $3;
   }
-| class_const_decl
+| first_class_const_decl
+;
+
+first_class_const_decl:
+  T_STRING '=' expr {
+    $$ = $1 + $2 + $3;
+  }
+| semi_reserved '=' expr {
+    $$ = $1 + $2 + $3;
+  }
+| type_expr identifier '=' expr {
+    $$ = $1 + $2 + $3 + $4;
+  }
 ;
 
 class_const_decl:
